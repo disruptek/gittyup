@@ -10,19 +10,43 @@ import std/tables
 import std/uri
 
 const
-  git2SetVer {.strdefine.} = "master"
-  git2Git {.booldefine.} = true
-
-import nimgit2
+  git2SetVer {.strdefine, used.} = "master"
 
 when git2SetVer == "master":
-  discard
-elif git2SetVer == "v0.28.3":
-  discard
-elif git2SetVer == "v0.28.4":
-  discard
+  const
+    hasWorkingStatus* = true
+elif git2SetVer == "0.28.3" or git2SetVer == "0.28.4":
+  const
+    hasWorkingStatus* = false
+elif git2SetVer == "v0.28.3" or git2SetVer == "v0.28.4":
+  const
+    hasWorkingStatus* = false
 else:
-  {.error: "libgit2 version `" & git2SetVer & "` unsupported".}
+  {.fatal: "libgit2 version `" & git2SetVer & "` unsupported".}
+
+import nimgit2
+import result
+
+# there are some name changes between the 0.28 and later versions
+when compiles(git_clone_init_options):
+  template git_clone_options_init(options: ptr git_clone_options;
+                                  version: cint): cint =
+    git_clone_init_options(options, version)
+
+when compiles(git_checkout_init_options):
+  template git_checkout_options_init(options: ptr git_checkout_options;
+                                   version: cint): cint =
+    git_checkout_init_options(options, version)
+
+when compiles(git_diff_init_options):
+  template git_diff_options_init(options: ptr git_diff_options;
+                                   version: cint): cint =
+    git_diff_init_options(options, version)
+
+when compiles(git_status_init_options):
+  template git_status_options_init(options: ptr git_status_options;
+                                   version: cint): cint =
+    git_status_init_options(options, version)
 
 {.hint: "libgit2 version `" & git2SetVer & "`".}
 
@@ -323,12 +347,10 @@ type
     repo*: GitRepository
 
   GitTagTable* = OrderedTableRef[string, GitThing]
+  GitResult*[T] = Result[T, GitResultCode]
 
-proc grc(code: cint): GitResultCode =
-  result = cast[GitResultCode](code.ord)
-
-proc gec(code: int): GitErrorClass =
-  result = cast[GitErrorClass](code.ord)
+template grc(code: cint): GitResultCode = cast[GitResultCode](code.ord)
+template gec(code: cint): GitErrorClass = cast[GitErrorClass](code.ord)
 
 proc hash*(gcs: GitCheckoutStrategy): Hash = gcs.ord.hash
 
@@ -367,6 +389,8 @@ template dumpError() =
     when defined(gitErrorsAreFatal):
       raise newException(Defect, emsg)
 
+template dumpError*(code: GitResultCode) = dumpError()
+
 template gitFail*(allocd: typed; code: GitResultCode; body: untyped) =
   ## a version of gitTrap that expects failure; no error messages!
   defer:
@@ -391,6 +415,27 @@ template gitTrap*(allocd: typed; code: GitResultCode; body: untyped) =
 template gitTrap*(code: GitResultCode; body: untyped) =
   if code != grcOk:
     dumpError()
+    body
+
+template ok(self: var GitResult; x: auto) = result.ok(self.Result, x)
+template err(self: var GitResult; x: auto) = result.err(self.Result, x)
+template ok*[T](v: T): auto = typeof(result).ok(v)
+template err*[T](v: T): auto = typeof(result).err(v)
+#template `:=`(v: untyped{nkIdent}; vv: Result): bool =
+#  (let vr = vv; template v: auto = unsafeGet(vr); vr.isOk)
+
+template `:=`*[T](v: untyped{nkIdent}; vv: Result[T, GitResultCode]; body: untyped): untyped =
+  let vr = vv
+  template v: auto = unsafeGet(vr)
+  defer:
+    if isOk(vr):
+      when defined(debugGit):
+        debug "freeing ", $v
+      free(unsafeGet(vr))
+  if not isOk(vr):
+    var code {.inject.} = vr.error
+    when defined(debugGit):
+      debug "failure ", $v, ": ", $code
     body
 
 proc normalizeUrl(uri: Uri): Uri =
@@ -713,25 +758,28 @@ proc newThing(obj: GitObject): GitThing =
 proc toThing*(commit: GitCommit): GitThing =
   result = newThing(cast[GitObject](commit))
 
-proc clone*(got: var GitClone; uri: Uri; path: string;
-            branch = ""): GitResultCode =
+proc clone*(uri: Uri; path: string; branch = ""): GitResult[GitRepository] =
   ## clone a repository
-  got.options = cast[ptr git_clone_options](sizeof(git_clone_options).alloc)
+  var
+    options = cast[ptr git_clone_options](sizeof(git_clone_options).alloc)
   defer:
-    got.options.free
+    options.dealloc
   withGit:
-    when git2SetVer == "master":
-      result = git_clone_options_init(got.options,
-                                      GIT_CLONE_OPTIONS_VERSION).grc
-    else:
-      result = git_clone_init_options(got.options,
-                                      GIT_CLONE_OPTIONS_VERSION).grc
-    if result == grcOk:
+    block:
+      var
+        code = grc(git_clone_options_init(options, GIT_CLONE_OPTIONS_VERSION))
+      if code != grcOk:
+        result.err code
+        break
       if branch != "":
-        got.options.checkout_branch = branch
-      got.url = $uri
-      got.directory = path
-      result = git_clone(addr got.repo, got.url, got.directory, got.options).grc
+        options.checkout_branch = branch
+      var
+        repo: GitRepository
+      code = git_clone(addr repo, $uri, path, options).grc
+      if code != grcOk:
+        result.err code
+        break
+      result.ok repo
 
 proc setHeadDetached*(repo: GitRepository; oid: GitOid): GitResultCode =
   ## detach the HEAD and point it at the given OID
@@ -958,9 +1006,7 @@ proc repositoryState*(path: string): GitRepoState =
   demandGitRepoAt(path):
     result = repositoryState(repo)
 
-when git2SetVer == "master":
-  const
-    hasWorkingStatus* = true
+when hasWorkingStatus == true:
   iterator status*(repository: GitRepository; show: GitStatusShow;
                    flags = defaultStatusFlags): GitStatus =
     ## iterate over files in the repo using the given search flags
@@ -972,8 +1018,7 @@ when git2SetVer == "master":
         options.free
 
       block:
-        if grcOk != git_status_options_init(options,
-                                            GIT_STATUS_OPTIONS_VERSION).grc:
+        if grcOk != grc(git_status_options_init(options, GIT_STATUS_OPTIONS_VERSION)):
           break
 
         options.show = cast[git_status_show_t](show)
@@ -991,8 +1036,6 @@ when git2SetVer == "master":
           yield git_status_byindex(statum, index.cuint)
 
 else:
-  const
-    hasWorkingStatus* = false
   iterator status*(repository: GitRepository; show: GitStatusShow;
                    flags = defaultStatusFlags): GitStatus =
     raise newException(ValueError, "you need a newer libgit2 to do that")
@@ -1032,12 +1075,8 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
         commit.free
 
       # setup our checkout options
-      when git2SetVer == "master":
-        result = git_checkout_options_init(options,
-                                           GIT_CHECKOUT_OPTIONS_VERSION).grc
-      else:
-        result = git_checkout_init_options(options,
-                                           GIT_CHECKOUT_OPTIONS_VERSION).grc
+      result = git_checkout_options_init(options,
+                                         GIT_CHECKOUT_OPTIONS_VERSION).grc
       if result != grcOk:
         break
 
@@ -1085,12 +1124,8 @@ proc checkoutHead*(repo: GitRepository;
 
     block:
       # setup our checkout options
-      when git2SetVer == "master":
-        result = git_checkout_options_init(options,
-                                           GIT_CHECKOUT_OPTIONS_VERSION).grc
-      else:
-        result = git_checkout_init_options(options,
-                                           GIT_CHECKOUT_OPTIONS_VERSION).grc
+      result = git_checkout_options_init(options,
+                                         GIT_CHECKOUT_OPTIONS_VERSION).grc
       if result != grcOk:
         break
 
@@ -1325,12 +1360,8 @@ iterator commitsForSpec*(repo: GitRepository;
         grc: GitResultCode
 
       # options for matching against n parent trees
-      when git2SetVer == "master":
-        if grcOk != git_diff_options_init(options, GIT_DIFF_OPTIONS_VERSION).grc:
-          break
-      else:
-        if grcOk != git_diff_init_options(options, GIT_DIFF_OPTIONS_VERSION).grc:
-          break
+      if grcOk != git_diff_options_init(options, GIT_DIFF_OPTIONS_VERSION).grc:
+        break
       options.pathspec.count = len(spec).cuint
       options.pathspec.strings = cast[ptr cstring](allocCStringArray(spec))
       defer:
