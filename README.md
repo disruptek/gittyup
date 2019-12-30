@@ -12,6 +12,12 @@ Use one of these combinations of defines, in decreasing preference:
 --define:git2Git --define:git2SetVer="v0.28.3"
 ```
 
+## Tests
+
+gittyup continuous integration tests run flavors with `--gc:arc`, `cpp`,
+`-d:danger`, and the libgit2 versions listed above, on Windows, OS X, and
+Linux; they should be pretty comprehensive.
+
 ## Documentation
 See [the documentation for the gittyup module](https://disruptek.github.io/gittyup/gittyup.html) as generated directly from the source.
 
