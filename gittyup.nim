@@ -26,6 +26,7 @@ else:
 
 import nimgit2
 import result
+export result
 
 # there are some name changes between the 0.28 and later versions
 when compiles(git_clone_init_options):
@@ -417,14 +418,15 @@ template gitTrap*(code: GitResultCode; body: untyped) =
     dumpError()
     body
 
-template ok(self: var GitResult; x: auto) = result.ok(self.Result, x)
-template err(self: var GitResult; x: auto) = result.err(self.Result, x)
+template ok*(self: var GitResult; x: auto) = result.ok(self.Result, x)
+template err*(self: var GitResult; x: auto) = result.err(self.Result, x)
 template ok*[T](v: T): auto = typeof(result).ok(v)
 template err*[T](v: T): auto = typeof(result).err(v)
 #template `:=`(v: untyped{nkIdent}; vv: Result): bool =
 #  (let vr = vv; template v: auto = unsafeGet(vr); vr.isOk)
 
-template `:=`*[T](v: untyped{nkIdent}; vv: Result[T, GitResultCode]; body: untyped): untyped =
+template `:=`*[T](v: untyped{nkIdent}; vv: Result[T, GitResultCode];
+                  body: untyped): untyped =
   let vr = vv
   template v: auto = unsafeGet(vr)
   defer:
@@ -433,7 +435,7 @@ template `:=`*[T](v: untyped{nkIdent}; vv: Result[T, GitResultCode]; body: untyp
         debug "freeing ", $v
       free(unsafeGet(vr))
   if not isOk(vr):
-    var code {.inject.} = vr.error
+    var code {.used, inject.} = vr.error
     when defined(debugGit):
       debug "failure ", $v, ": ", $code
     body
@@ -561,47 +563,42 @@ proc short*(oid: GitOid; size: int): string =
     result = $output
     dealloc(output)
 
-proc `$`*(buffer: ptr git_buf): string =
+func `$`*(repo: GitRepository): string =
+  result = $git_repository_path(repo)
+
+func `$`*(buffer: ptr git_buf): string =
   result = $cast[cstring](buffer)
 
-proc `$`*(annotated: ptr git_annotated_commit): string =
-  withGit:
-    result = $git_annotated_commit_ref(annotated)
+func `$`*(annotated: ptr git_annotated_commit): string =
+  result = $git_annotated_commit_ref(annotated)
 
-proc `$`*(got: GitOid): string =
-  withGit:
-    result = $git_oid_tostr_s(got)
+func `$`*(oid: GitOid): string =
+  result = $git_oid_tostr_s(oid)
 
-proc `$`*(tag: GitTag): string =
-  withGit:
-    assert tag != nil
+func `$`*(tag: GitTag): string =
+  if tag != nil:
     let
       name = git_tag_name(tag)
     if name != nil:
       result = $name
 
 proc oid*(entry: GitTreeEntry): GitOid =
-  withGit:
-    result = git_tree_entry_id(entry)
+  result = git_tree_entry_id(entry)
 
 proc oid*(got: GitReference): GitOid =
-  withGit:
-    result = git_reference_target(got)
+  result = git_reference_target(got)
 
 proc oid*(obj: GitObject): GitOid =
-  withGit:
-    result = git_object_id(obj)
+  result = git_object_id(obj)
 
 proc oid*(thing: GitThing): GitOid =
   result = thing.o.oid
 
 proc oid*(tag: GitTag): GitOid =
-  withGit:
-    result = git_tag_id(tag)
+  result = git_tag_id(tag)
 
-proc name*(entry: GitTreeEntry): string =
-  withGit:
-    result = $git_tree_entry_name(entry)
+func name*(entry: GitTreeEntry): string =
+  result = $git_tree_entry_name(entry)
 
 proc branchName*(got: GitReference): string =
   ## fetch a branch name assuming the reference is a branch
@@ -618,17 +615,15 @@ proc branchName*(got: GitReference): string =
         break
       result = $name
 
-proc isTag*(got: GitReference): bool =
-  withGit:
-    result = git_reference_is_tag(got) == 1
+func isTag*(got: GitReference): bool =
+  result = git_reference_is_tag(got) == 1
 
 proc isBranch*(got: GitReference): bool =
   withGit:
     result = git_reference_is_branch(got) == 1
 
-proc name*(got: GitReference): string =
-  withGit:
-    result = $git_reference_name(got)
+func name*(got: GitReference): string =
+  result = $git_reference_name(got)
 
 proc owner*(thing: GitThing): GitRepository =
   ## retrieve the repository that owns this thing
@@ -652,24 +647,23 @@ proc setFlags[T](flags: seq[T] | set[T] | HashSet[T]): cuint =
   for flag in flags.items:
     result = bitor(result, flag.ord.cuint).cuint
 
-proc `$`*(reference: GitReference): string =
+func `$`*(reference: GitReference): string =
   if reference.isTag:
     result = reference.name
   else:
     result = $reference.oid
 
-proc `$`*(entry: GitTreeEntry): string =
+func `$`*(entry: GitTreeEntry): string =
   result = entry.name
 
-proc `$`*(obj: GitObject): string =
-  withGit:
-    result = $(git_object_type(obj).git_object_type2string)
-    result &= "-" & $obj.git_object_id
+func `$`*(obj: GitObject): string =
+  result = $(git_object_type(obj).git_object_type2string)
+  result &= "-" & $obj.git_object_id
 
-proc `$`*(thing: GitThing): string =
+func `$`*(thing: GitThing): string =
   result = $thing.o
 
-proc `$`*(status: GitStatus): string =
+func `$`*(status: GitStatus): string =
   for flag in status.flags.items:
     if result != "":
       result &= ","
@@ -707,7 +701,7 @@ proc summary*(thing: GitThing): string =
     raise newException(ValueError, "dunno how to get a summary: " & $thing)
   result = result.strip
 
-proc `$`*(commit: GitCommit): string =
+func `$`*(commit: GitCommit): string =
   result = $cast[GitObject](commit)
 
 proc free*(table: var GitTagTable) =
@@ -797,11 +791,35 @@ proc setHeadDetached*(repo: GitRepository; reference: string): GitResultCode =
     if result == grcOk:
       result = repo.setHeadDetached(oid)
 
-proc openRepository*(got: var GitOpen; path: string): GitResultCode =
+proc openRepository*(path: string): GitResult[GitRepository] =
+  ## open a repository by path
+  withGit:
+    var
+      repo: GitRepository
+    let
+      code = git_repository_open(addr repo, path).grc
+    if code == grcOk:
+      result.ok repo
+    else:
+      result.err code
+
+proc openRepository*(got: var GitOpen; path: string): GitResultCode {.deprecated.} =
   ## open a repository by path
   got.path = path
   withGit:
     result = git_repository_open(addr got.repo, got.path).grc
+
+proc repositoryHead*(repo: GitRepository): GitResult[GitReference] =
+  ## fetch the reference for the repository's head
+  withGit:
+    var
+      head: GitReference
+    let
+      code = git_repository_head(addr head, repo).grc
+    if code == grcOk:
+      result.ok head
+    else:
+      result.err code
 
 proc repositoryHead*(head: var GitReference; repo: GitRepository): GitResultCode =
   ## fetch the reference for the repository's head
@@ -813,9 +831,9 @@ proc repositoryHead*(head: var GitReference; path: string): GitResultCode =
   withGitRepoAt(path):
     result = repositoryHead(head, repo)
 
-proc headReference*(repo: GitRepository; tag: var GitReference): GitResultCode =
+proc headReference*(repo: GitRepository): GitResult[GitReference] =
   ## alias for repositoryHead
-  result = repositoryHead(tag, repo)
+  result = repositoryHead(repo)
 
 proc remoteLookup*(remote: var GitRemote; repo: GitRepository;
                    name: string): GitResultCode =
@@ -912,7 +930,20 @@ proc tagList*(repo: GitRepository; tags: var seq[string]): GitResultCode =
       if list.count > 0'u:
         tags = cstringArrayToSeq(cast[cstringArray](list.strings), list.count)
 
-proc lookupThing*(thing: var GitThing; repo: GitRepository; name: string): GitResultCode =
+proc lookupThing*(repo: GitRepository; name: string): GitResult[GitThing] =
+  ## try to look some thing up in the repository with the given name
+  withGit:
+    var
+      obj: GitObject
+    let
+      code = git_revparse_single(addr obj, repo, name).grc
+    if code == grcOk:
+      result.ok newThing(obj)
+    else:
+      result.err code
+
+proc lookupThing*(thing: var GitThing; repo: GitRepository;
+                  name: string): GitResultCode {.deprecated.} =
   ## try to look some thing up in the repository with the given name
   var
     obj: GitObject
@@ -921,7 +952,8 @@ proc lookupThing*(thing: var GitThing; repo: GitRepository; name: string): GitRe
     if result == grcOk:
       thing = newThing(obj)
 
-proc lookupThing*(thing: var GitThing; path: string; name: string): GitResultCode =
+proc lookupThing*(thing: var GitThing; path: string;
+                  name: string): GitResultCode =
   ## try to look some thing up in the repository at the given path
   withGitRepoAt(path):
     result = lookupThing(thing, repo, name)
@@ -975,23 +1007,17 @@ proc shortestTag*(table: GitTagTable; oid: string): string =
   if result == "":
     result = oid
 
-proc getHeadOid*(repository: GitRepository): Option[GitOid] =
+proc getHeadOid*(repository: GitRepository): GitResult[GitOid] =
   ## try to retrieve the #head oid from a repository
-  var
-    head: GitReference
   withGit:
-    block:
-      gitFail head, repository.headReference(head):
-        var code: GitResultCode
-        case code:
-        of grcOk, grcNotFound:
-          discard
-        else:
-          dumpError()
-        break
-      result = head.oid.some
+    let
+      head = repository.headReference
+    if head.isOk:
+      result.ok head.get.oid
+    else:
+      result.err head.error
 
-proc getHeadOid*(path: string): Option[GitOid] =
+proc getHeadOid*(path: string): GitResult[GitOid] =
   ## try to retrieve the #head oid from a repository at the given path
   demandGitRepoAt(path):
     result = repo.getHeadOid
@@ -1355,7 +1381,6 @@ iterator commitsForSpec*(repo: GitRepository;
     block master:
       var
         ps: GitPathSpec
-        head: GitOid
         walker: GitRevWalker
         grc: GitResultCode
 
@@ -1376,18 +1401,17 @@ iterator commitsForSpec*(repo: GitRepository;
         break
 
       # find the head
-      let findHead = repo.getHeadOid
-      if findHead.isNone:
+      let head = repo.getHeadOid
+      if head.isErr:
         # no head, no problem
         break
 
       # start at the head
-      head = findHead.get
-      gitTrap walker.push(head):
+      gitTrap walker.push(head.get):
         break
 
       # iterate over ALL the commits
-      for commit in repo.revWalk(walker, head):
+      for commit in repo.revWalk(walker, head.get):
         let
           parents = git_commit_parentcount(commit)
         var

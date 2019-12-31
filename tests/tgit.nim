@@ -3,10 +3,30 @@ import std/unittest
 
 import gittyup
 
+const
+  v1 = "555d5d803f1c63f3fad296ba844cd6f718861d0e"
+
 suite "gittyup":
-  test "open/shut git":
+  setup:
     check init()
+    repo := openRepository(getCurrentDir()):
+      code.dumpError
+      check false
+
+  teardown:
     check shutdown()
 
   test "repo state":
-    check repositoryState(getCurrentDir()) == grsNone
+    check repo.repositoryState == grsNone
+
+  test "get the head":
+    head := repo.repositoryHead:
+      check false
+    let
+      oid = head.oid
+    check $oid != ""
+
+  test "get a thing for 1.0.0":
+    thing := lookupThing(repo, "1.0.0"):
+      check false
+    check $thing.oid == v1
