@@ -1,10 +1,10 @@
-version = "1.0.2"
+version = "1.0.3"
 author = "disruptek"
 description = "higher-level git bindings that build upon nimgit2"
 license = "MIT"
 requires "nim >= 1.0.4"
 requires "nimgit2 0.1.1"
-requires "https://github.com/disruptek/nim-result"
+requires "result"
 
 proc execCmd(cmd: string) =
   echo "execCmd:" & cmd
