@@ -430,7 +430,7 @@ template err*[T](v: T): auto = typeof(result).err(v)
 template `:=`*[T](v: untyped{nkIdent}; vv: Result[T, GitResultCode];
                   body: untyped): untyped =
   let vr = vv
-  template v: auto = unsafeGet(vr)
+  template v: auto {.used.} = unsafeGet(vr)
   defer:
     if isOk(vr):
       when defined(debugGit):
@@ -473,15 +473,33 @@ template withGit(body: untyped) =
   body
 
 template withGitRepoAt(path: string; body: untyped) =
+  ## run the body, opening `repo` at the given `path`.
+  ## sets the proper return value in the event of error.
+  ## note that this introduces scope.
   withGit:
-    repository := openRepository(path):
-      when declaredInScope(result):
-        when result is GitResultCode:
-          var code: GitResultCode
-          result = code
-      error "error opening repository " & path
-    var repo {.inject.} = repository
+    block:
+      repository := openRepository(path):
+        when declaredInScope(result):
+          when result is GitResultCode:
+            result = code
+          when result of GitResult:
+            result.err code
+        break
+      var repo {.inject.} = repository
+      body
+
+template withResultOf(gitsaid: cint; body: untyped) =
+  ## when git said there was an error, set the result code;
+  ## else, run the body
+  if grc(gitsaid) == grcOk:
     body
+  else:
+    discard
+    when declaredInScope(result):
+      when result is GitResultCode:
+        result = grc(gitsaid)
+      when result of GitResult:
+        result.err grc(gitsaid)
 
 template demandGitRepoAt(path: string; body: untyped) =
   withGit:
@@ -564,6 +582,20 @@ proc short*(oid: GitOid; size: int): string =
     result = $output
     dealloc(output)
 
+proc url*(remote: GitRemote): Uri =
+  ## retrieve the url of a remote
+  withGit:
+    result = parseUri($git_remote_url(remote)).normalizeUrl
+
+func name*(entry: GitTreeEntry): string =
+  result = $git_tree_entry_name(entry)
+
+func name*(remote: GitRemote): string =
+  result = $git_remote_name(remote)
+
+func `$`*(remote: GitRemote): string =
+  result = remote.name
+
 func `$`*(repo: GitRepository): string =
   result = $git_repository_path(repo)
 
@@ -597,9 +629,6 @@ proc oid*(thing: GitThing): GitOid =
 
 proc oid*(tag: GitTag): GitOid =
   result = git_tag_id(tag)
-
-func name*(entry: GitTreeEntry): string =
-  result = $git_tree_entry_name(entry)
 
 proc branchName*(got: GitReference): string =
   ## fetch a branch name assuming the reference is a branch
@@ -755,26 +784,18 @@ proc toThing*(commit: GitCommit): GitThing =
 
 proc clone*(uri: Uri; path: string; branch = ""): GitResult[GitRepository] =
   ## clone a repository
-  var
-    options = cast[ptr git_clone_options](sizeof(git_clone_options).alloc)
-  defer:
-    options.dealloc
   withGit:
-    block:
-      var
-        code = grc(git_clone_options_init(options, GIT_CLONE_OPTIONS_VERSION))
-      if code != grcOk:
-        result.err code
-        break
+    var
+      options = cast[ptr git_clone_options](sizeof(git_clone_options).alloc)
+    defer:
+      options.dealloc
+    withResultOf git_clone_options_init(options, GIT_CLONE_OPTIONS_VERSION):
       if branch != "":
         options.checkout_branch = branch
       var
         repo: GitRepository
-      code = git_clone(addr repo, $uri, path, options).grc
-      if code != grcOk:
-        result.err code
-        break
-      result.ok repo
+      withResultOf git_clone(addr repo, $uri, path, options):
+        result.ok repo
 
 proc setHeadDetached*(repo: GitRepository; oid: GitOid): GitResultCode =
   ## detach the HEAD and point it at the given OID
@@ -793,41 +814,36 @@ proc setHeadDetached*(repo: GitRepository; reference: string): GitResultCode =
       result = repo.setHeadDetached(oid)
 
 proc openRepository*(path: string): GitResult[GitRepository] =
-  ## open a repository by path
+  ## open a repository by path; the repository must be freed
   withGit:
     var
       repo: GitRepository
-    let
-      code = git_repository_open(addr repo, path).grc
-    if code == grcOk:
+    withResultOf git_repository_open(addr repo, path):
       result.ok repo
-    else:
-      result.err code
 
-proc openRepository*(got: var GitOpen; path: string): GitResultCode {.deprecated.} =
+proc openRepository*(got: var GitOpen; path: string): GitResultCode
+  {.deprecated.} =
   ## open a repository by path
   got.path = path
   withGit:
     result = git_repository_open(addr got.repo, got.path).grc
 
 proc repositoryHead*(repo: GitRepository): GitResult[GitReference] =
-  ## fetch the reference for the repository's head
+  ## fetch the reference for the repository's head; the reference must be freed
   withGit:
     var
       head: GitReference
-    let
-      code = git_repository_head(addr head, repo).grc
-    if code == grcOk:
+    withResultOf git_repository_head(addr head, repo):
       result.ok head
-    else:
-      result.err code
 
-proc repositoryHead*(head: var GitReference; repo: GitRepository): GitResultCode =
+proc repositoryHead*(head: var GitReference; repo: GitRepository): GitResultCode
+  {.deprecated.} =
   ## fetch the reference for the repository's head
   withGit:
     result = git_repository_head(addr head, repo).grc
 
-proc repositoryHead*(head: var GitReference; path: string): GitResultCode =
+proc repositoryHead*(head: var GitReference; path: string): GitResultCode
+  {.deprecated.} =
   ## fetch the reference for the head of the repository at the given path
   withGitRepoAt(path):
     result = repositoryHead(head, repo)
@@ -836,8 +852,16 @@ proc headReference*(repo: GitRepository): GitResult[GitReference] =
   ## alias for repositoryHead
   result = repositoryHead(repo)
 
+proc remoteLookup*(repo: GitRepository; name: string): GitResult[GitRemote] =
+  ## get the remote by name; the remote must be freed
+  withGit:
+    var
+      remote: GitRemote
+    withResultOf git_remote_lookup(addr remote, repo, name):
+      result.ok remote
+
 proc remoteLookup*(remote: var GitRemote; repo: GitRepository;
-                   name: string): GitResultCode =
+                   name: string): GitResultCode {.deprecated.} =
   ## get the remote by name
   withGit:
     result = git_remote_lookup(addr remote, repo, name).grc
@@ -890,11 +914,6 @@ proc remoteCreate*(remote: var GitRemote; path: string;
   ## create a new remote in the repository at the given path
   withGitRepoAt(path):
     result = remoteCreate(remote, repo, name, url)
-
-proc url*(remote: GitRemote): Uri =
-  ## retrieve the url of a remote
-  withGit:
-    result = parseUri($git_remote_url(remote)).normalizeUrl
 
 proc `==`*(a, b: GitOid): bool =
   withGit:
