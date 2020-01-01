@@ -12,6 +12,46 @@ Use one of these combinations of defines, in decreasing preference:
 --define:git2Git --define:git2SetVer="v0.28.3"
 ```
 
+This gives some idea for the syntax at present:
+
+```nim
+import gittyup
+
+# a simple example of cloning a repo
+block cloning:
+  let
+    url = parseURI"https://github.com/disruptek/gittyup"
+    dir = "/some/where/gitty"
+
+  # perform a clone; repo is a GitRepository object
+  repo := clone(url, dir):
+    # this is your error handler;
+    # code is an enum of GitResultCode
+    case code:
+    of grcExists:
+      error dir, " already exists, i guess"
+    of grcNotFound:
+      error url, " isn't a git url, maybe"
+    else:
+      error code
+
+    # you don't have to leave, but i recommend it
+    break
+
+  # "manual" call invocation means you perform your
+  # own memory work, but it's sometimes more ideal
+  let
+    head = repo.headReference
+
+  # using result semantics...
+  if head.isErr:
+    echo "error code: ", head.error
+  else:
+    echo "head oid: ", head.get.oid
+
+# repo is now out of scope and will be freed automatically
+```
+
 ## Tests
 
 gittyup continuous integration tests run flavors with `--gc:arc`, `cpp`,
