@@ -10,11 +10,14 @@ suite "gittyup":
   setup:
     check init()
     repo := openRepository(getCurrentDir()):
-      code.dumpError
+      echo code.dumpError
       check false
 
   teardown:
     check shutdown()
+
+  test "zero errors":
+    check grcOk.dumpError == ""
 
   test "repo state":
     check repo.repositoryState == grsNone
@@ -27,6 +30,6 @@ suite "gittyup":
     check $oid != ""
 
   test "get a thing for 1.0.0":
-    thing := lookupThing(repo, "1.0.0"):
+    thing := repo.lookupThing("1.0.0"):
       check false
     check $thing.oid == v1

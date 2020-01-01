@@ -33,8 +33,8 @@ block cloning:
     of grcNotFound:
       error url, " isn't a git url, maybe"
     else:
-      # i know; it should probably just return a string
-      code.dumpError
+      # an error string more specific than $code
+      error code.dumpError
 
     # you don't have to leave, but i recommend it
     break

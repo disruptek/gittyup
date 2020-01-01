@@ -382,15 +382,17 @@ const
     else:
       commonDefaultStatusFlags + {gsoSortCaseInsensitively}
 
-template dumpError() =
+proc dumpError*(code: GitResultCode): string =
   let err = git_error_last()
   if err != nil:
-    let emsg = $gec(err.klass) & " error: " & $err.message
-    error emsg
+    result = $gec(err.klass) & " error: " & $err.message
     when defined(gitErrorsAreFatal):
       raise newException(Defect, emsg)
 
-template dumpError*(code: GitResultCode) = dumpError()
+template dumpError() =
+  let emsg = grcOk.dumpError
+  if emsg != "":
+    error emsg
 
 template gitFail*(allocd: typed; code: GitResultCode; body: untyped) =
   ## a version of gitTrap that expects failure; no error messages!
@@ -472,14 +474,13 @@ template withGit(body: untyped) =
 
 template withGitRepoAt(path: string; body: untyped) =
   withGit:
-    var open: GitOpen
-    gitTrap open, openRepository(open, path):
+    repository := openRepository(path):
       when declaredInScope(result):
         when result is GitResultCode:
           var code: GitResultCode
           result = code
       error "error opening repository " & path
-    var repo {.inject.} = open.repo
+    var repo {.inject.} = repository
     body
 
 template demandGitRepoAt(path: string; body: untyped) =
