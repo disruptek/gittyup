@@ -586,7 +586,7 @@ proc short*(oid: GitOid; size: int): string =
     output[size] = '\0'
     git_oid_nfmt(output, size.uint, oid)
     result = $output
-    dealloc(output)
+    dealloc output
 
 proc url*(remote: GitRemote): Uri =
   ## retrieve the url of a remote
@@ -798,7 +798,7 @@ proc clone*(uri: Uri; path: string; branch = ""): GitResult[GitRepository] =
     var
       options = cast[ptr git_clone_options](sizeof(git_clone_options).alloc)
     defer:
-      options.dealloc
+      dealloc options
     withResultOf git_clone_options_init(options, GIT_CLONE_OPTIONS_VERSION):
       if branch != "":
         options.checkout_branch = branch
@@ -817,7 +817,7 @@ proc setHeadDetached*(repo: GitRepository; reference: string): GitResultCode =
   var
     oid: ptr git_oid = cast[ptr git_oid](sizeof(git_oid).alloc)
   defer:
-    oid.free
+    dealloc oid
   withGit:
     result = git_oid_fromstr(oid, reference).grc
     if result == grcOk:
@@ -1085,7 +1085,7 @@ when hasWorkingStatus == true:
       var
         options = cast[ptr git_status_options](sizeof(git_status_options).alloc)
       defer:
-        options.free
+        dealloc options
 
       block:
         var
@@ -1139,7 +1139,7 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
       commit: ptr git_commit
       target: ptr git_annotated_commit
     defer:
-      options.free
+      dealloc options
 
     block:
       # start with converting the thing to an annotated commit
@@ -1202,7 +1202,7 @@ proc checkoutHead*(repo: GitRepository;
     var
       options = cast[ptr git_checkout_options](sizeof(git_checkout_options).alloc)
     defer:
-      options.free
+      dealloc options
 
     block:
       # setup our checkout options
@@ -1489,15 +1489,19 @@ iterator commitsForSpec*(repo: GitRepository;
     var
       options = cast[ptr git_diff_options](sizeof(git_diff_options).alloc)
     defer:
-      options.free
+      dealloc options
 
     block master:
       var
         ps: GitPathSpec
         walker: GitRevWalker
+        code: GitResultCode
 
       # options for matching against n parent trees
-      if grcOk != git_diff_options_init(options, GIT_DIFF_OPTIONS_VERSION).grc:
+      code = git_diff_options_init(options, GIT_DIFF_OPTIONS_VERSION).grc
+      if code != grcOk:
+        # if there's an error, emit it and bail
+        yield newResult[GitThing](code)
         break
       options.pathspec.count = len(spec).cuint
       options.pathspec.strings = cast[ptr cstring](allocCStringArray(spec))
@@ -1563,103 +1567,151 @@ iterator commitsForSpec*(path: string;
     for commit in commitsForSpec(repo, spec):
       yield commit
 
-proc tagCreateLightweight*(oid: var GitOid; repo: GitRepository; name: string;
-                           target: GitThing; force = false): GitResultCode =
+proc tagCreateLightweight*(repo: GitRepository; name: string; target: GitThing;
+                           force = false): GitResult[GitOid] =
   ## create a new lightweight tag in the repository
   withGit:
-    let
-      forced: cint = if force: 1 else: 0
-    oid = cast[ptr git_oid](sizeof(git_oid).alloc)
-    result = git_tag_create_lightweight(oid,
-                                        repo, name, target.o, forced).grc
-    if result != grcOk:
-      defer:
-        oid.free
+    block:
+      let
+        forced: cint = if force: 1 else: 0
+      var
+        oid: GitOid = cast[GitOid](sizeof(git_oid).alloc)
+      withResultOf git_tag_create_lightweight(oid, repo, name, target.o, forced):
+        result.ok oid
+        break
+      # free the oid if we didn't end up using it
+      dealloc oid
+
+proc tagCreateLightweight*(oid: var GitOid; repo: GitRepository; name: string;
+                           target: GitThing; force = false): GitResultCode
+  {.deprecated.} =
+  ## create a new lightweight tag in the repository
+  withGit:
+    block:
+      let
+        tag = repo.tagCreateLightweight(name, target, force = force)
+      if tag.isErr:
+        result = tag.error
+      else:
+        oid = tag.get
 
 proc tagCreateLightweight*(oid: var GitOid; path: string; name: string;
-                           target: GitThing; force = false): GitResultCode =
+                           target: GitThing; force = false): GitResultCode
+  {.deprecated.} =
   ## create a new lightweight tag in the repository
   withGitRepoAt(path):
     result = tagCreateLightweight(oid, repo, name, target, force = force)
 
-proc branchUpstream*(upstream: var GitReference;
-                     branch: GitReference): GitResultCode =
+proc branchUpstream*(branch: GitReference): GitResult[GitReference] =
   ## retrieve remote tracking reference for a branch reference
   withGit:
-    result = git_branch_upstream(addr upstream, branch).grc
+    var
+      upstream: GitReference
+    withResultOf git_branch_upstream(addr upstream, branch):
+      result.ok upstream
+
+proc branchUpstream*(upstream: var GitReference;
+                     branch: GitReference): GitResultCode {.deprecated.} =
+  ## retrieve remote tracking reference for a branch reference
+  withGit:
+    let
+      up = branch.branchUpstream
+    if up.isErr:
+      result = up.error
+    else:
+      upstream = up.get
 
 proc setBranchUpstream*(branch: GitReference; name: string): GitResultCode =
   ## set the upstream for the branch to the given branch name
   withGit:
     result = git_branch_set_upstream(branch, name).grc
 
-proc branchRemoteName*(buffer: var GitBuf; repo: GitRepository;
-                       branch: string): GitResultCode =
+proc branchRemoteName*(repo: GitRepository; branch: string): GitResult[GitBuf] =
   ## try to fetch a single remote for a remote tracking branch
   withGit:
     var
       buff: git_buf
     # "1024 bytes oughta be enough for anybody"
-    result = git_buf_grow(addr buff, 1024.cuint).grc
-    if result == grcOk:
-      result = git_branch_remote_name(addr buff, repo, branch).grc
-      if result == grcOk:
-        buffer = addr buff
-      else:
+    withResultOf git_buf_grow(addr buff, 1024.cuint):
+      block:
+        withResultOf git_branch_remote_name(addr buff, repo, branch):
+          result.ok addr buff
+          break
+        # free the buffer if the call failed
         git_buf_dispose(addr buff)
 
+proc branchRemoteName*(buffer: var GitBuf; repo: GitRepository;
+                       branch: string): GitResultCode {.deprecated.} =
+  ## try to fetch a single remote for a remote tracking branch
+  withGit:
+    let
+      buff = repo.branchRemoteName(branch)
+    if buff.isErr:
+      result = buff.error
+    else:
+      buffer = buff.get
+
 proc branchRemoteName*(buffer: var GitBuf; path: string;
-                       branch: string): GitResultCode =
+                       branch: string): GitResultCode {.deprecated.} =
   ## try to fetch a single remote for a remote tracking branch
   withGitRepoAt(path):
     result = branchRemoteName(buffer, repo, branch)
 
 iterator branches*(repo: GitRepository;
-                   flags = {gbtLocal, gbtRemote}): GitReference =
+                   flags = {gbtLocal, gbtRemote}): GitResult[GitReference] =
   ## this time, you're just gonna have to guess at what this proc might do...
   if gbtAll in flags or flags.len == 0:
     raise newException(Defect, "now see here, chuckles")
 
   withGit:
     var
-      grc: GitResultCode
-      gbt: GitBranchType = gbtAll
-      iter: ptr git_branch_iterator
-      branch: GitReference
-      list: git_branch_t
-    # i know this is cookin' your noodle, but
-    if gbtLocal notin flags:
-      gbt = gbtRemote
-    elif gbtRemote notin flags:
-      gbt = gbtLocal
-
-    # we're gonna need to take the addr of this value
-    list = cast[git_branch_t](gbt.ord)
+      gbt = block:
+        # i know this is cookin' your noodle, but
+        if gbtLocal notin flags:
+          gbtRemote
+        elif gbtRemote notin flags:
+          gbtLocal
+        else:
+          gbtAll
+      # 'cause we're gonna need to take the addr of this value
+      list = cast[git_branch_t](gbt.ord)
 
     # follow close 'cause it's about to get weird
     block iteration:
-      # create an iterator
-      grc = git_branch_iterator_new(addr iter, repo, list).grc
-      gitTrap iter, grc:
-        dumpError()
+      var
+        iter: ptr git_branch_iterator
+        # create an iterator
+        code = git_branch_iterator_new(addr iter, repo, list).grc
+      if code != grcOk:
+        yield newResult[GitReference](code)
         break iteration
+      defer:
+        iter.free
+
       # iterate
       while true:
-        grc = git_branch_next(addr branch, addr list, iter).grc
-        gitFail branch, grc:
-          if grc != grcIterOver:
-            dumpError()
+        var
+          branch: GitReference
+        code = git_branch_next(addr branch, addr list, iter).grc
+        case code:
+        of grcOk:
+          defer:
+            branch.free
+          yield newResult(branch)
+        of grcIterOver:
           break iteration
-        yield branch
+        else:
+          yield newResult[GitReference](code)
     # now, look, i tol' you it was gonna get weird; it's
     # your own fault you weren't paying attention
 
 iterator branches*(path: string;
-                   flags = {gbtLocal, gbtRemote}): GitReference =
+                   flags = {gbtLocal, gbtRemote}): GitReference {.deprecated.} =
   ## we've been here before
   withGitRepoAt(path):
     for branch in repo.branches(flags = flags):
-      yield branch
+      if branch.isOk:
+        yield branch.get
 
 proc hasThing*(tags: GitTagTable; thing: GitThing): bool =
   ## true if the thing is tagged
