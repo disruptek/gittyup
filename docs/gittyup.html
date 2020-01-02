@@ -1022,6 +1022,8 @@ function main() {
   <ul class="simple simple-toc-section">
       <li><a class="reference" href="#hash%2CGitCheckoutStrategy"
     title="hash(gcs: GitCheckoutStrategy): Hash"><wbr />hash<span class="attachedType">GitCheckoutStrategy</span></a></li>
+  <li><a class="reference" href="#dumpError%2CGitResultCode"
+    title="dumpError(code: GitResultCode): string"><wbr />dump<wbr />Error<span class="attachedType">GitResultCode</span></a></li>
   <li><a class="reference" href="#init"
     title="init(): bool"><wbr />init<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#shutdown"
@@ -1040,6 +1042,8 @@ function main() {
     title="free(entries: GitTreeEntries)"><wbr />free<span class="attachedType">GitTreeEntries</span></a></li>
   <li><a class="reference" href="#short%2CGitOid%2Cint"
     title="short(oid: GitOid; size: int): string"><wbr />short<span class="attachedType">GitOid</span></a></li>
+  <li><a class="reference" href="#url%2CGitRemote"
+    title="url(remote: GitRemote): Uri"><wbr />url<span class="attachedType">GitRemote</span></a></li>
   <li><a class="reference" href="#oid%2CGitTreeEntry"
     title="oid(entry: GitTreeEntry): GitOid"><wbr />oid<span class="attachedType">GitTreeEntry</span></a></li>
   <li><a class="reference" href="#oid%2CGitReference"
@@ -1080,8 +1084,8 @@ function main() {
     title="hash(tag: GitTag): Hash"><wbr />hash<span class="attachedType">GitTag</span></a></li>
   <li><a class="reference" href="#hash%2CGitThing"
     title="hash(thing: GitThing): Hash"><wbr />hash<span class="attachedType">GitThing</span></a></li>
-  <li><a class="reference" href="#toThing%2CGitCommit"
-    title="toThing(commit: GitCommit): GitThing"><wbr />to<wbr />Thing<span class="attachedType">GitCommit</span></a></li>
+  <li><a class="reference" href="#commit%2CGitThing"
+    title="commit(thing: GitThing): GitCommit"><wbr />commit<span class="attachedType">GitThing</span></a></li>
   <li><a class="reference" href="#clone%2CUri%2Cstring%2Cstring"
     title="clone(uri: Uri; path: string; branch = &quot;&quot;): GitResult[GitRepository]"><wbr />clone<span class="attachedType">GitResult</span></a></li>
   <li><a class="reference" href="#setHeadDetached%2CGitRepository%2CGitOid"
@@ -1100,24 +1104,26 @@ function main() {
     title="repositoryHead(head: var GitReference; path: string): GitResultCode"><wbr />repository<wbr />Head<span class="attachedType">GitReference</span></a></li>
   <li><a class="reference" href="#headReference%2CGitRepository"
     title="headReference(repo: GitRepository): GitResult[GitReference]"><wbr />head<wbr />Reference<span class="attachedType">GitRepository</span></a></li>
+  <li><a class="reference" href="#remoteLookup%2CGitRepository%2Cstring"
+    title="remoteLookup(repo: GitRepository; name: string): GitResult[GitRemote]"><wbr />remote<wbr />Lookup<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#remoteLookup%2CGitRemote%2CGitRepository%2Cstring"
     title="remoteLookup(remote: var GitRemote; repo: GitRepository; name: string): GitResultCode"><wbr />remote<wbr />Lookup<span class="attachedType">GitRemote</span></a></li>
   <li><a class="reference" href="#remoteLookup%2CGitRemote%2Cstring%2Cstring"
     title="remoteLookup(remote: var GitRemote; path: string; name: string): GitResultCode"><wbr />remote<wbr />Lookup<span class="attachedType">GitRemote</span></a></li>
   <li><a class="reference" href="#remoteRename%2CGitRepository%2Cstring%2Cstring"
-    title="remoteRename(repo: GitRepository; prior: string; next: string): GitResultCode"><wbr />remote<wbr />Rename<span class="attachedType">GitRepository</span></a></li>
+    title="remoteRename(repo: GitRepository; prior: string; next: string): GitResult[seq[string]]"><wbr />remote<wbr />Rename<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#remoteRename%2Cstring%2Cstring%2Cstring"
     title="remoteRename(path: string; prior: string; next: string): GitResultCode"><wbr />remote<wbr />Rename<span class="attachedType">GitResultCode</span></a></li>
   <li><a class="reference" href="#remoteDelete%2CGitRepository%2Cstring"
     title="remoteDelete(repo: GitRepository; name: string): GitResultCode"><wbr />remote<wbr />Delete<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#remoteDelete%2Cstring%2Cstring"
     title="remoteDelete(path: string; name: string): GitResultCode"><wbr />remote<wbr />Delete<span class="attachedType">GitResultCode</span></a></li>
+  <li><a class="reference" href="#remoteCreate%2CGitRepository%2Cstring%2CUri"
+    title="remoteCreate(repo: GitRepository; name: string; url: Uri): GitResult[GitRemote]"><wbr />remote<wbr />Create<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#remoteCreate%2CGitRemote%2CGitRepository%2Cstring%2CUri"
     title="remoteCreate(remote: var GitRemote; repo: GitRepository; name: string; url: Uri): GitResultCode"><wbr />remote<wbr />Create<span class="attachedType">GitRemote</span></a></li>
   <li><a class="reference" href="#remoteCreate%2CGitRemote%2Cstring%2Cstring%2CUri"
     title="remoteCreate(remote: var GitRemote; path: string; name: string; url: Uri): GitResultCode"><wbr />remote<wbr />Create<span class="attachedType">GitRemote</span></a></li>
-  <li><a class="reference" href="#url%2CGitRemote"
-    title="url(remote: GitRemote): Uri"><wbr />url<span class="attachedType">GitRemote</span></a></li>
   <li><a class="reference" href="#%3D%3D%2CGitOid%2CGitOid"
     title="`==`(a, b: GitOid): bool"><wbr />`==`<span class="attachedType">GitOid</span></a></li>
   <li><a class="reference" href="#targetId%2CGitThing"
@@ -1158,26 +1164,34 @@ function main() {
     title="checkoutTree(path: string; reference: string; strategy = defaultCheckoutStrategy): GitResultCode"><wbr />checkout<wbr />Tree<span class="attachedType">GitResultCode</span></a></li>
   <li><a class="reference" href="#checkoutHead%2CGitRepository"
     title="checkoutHead(repo: GitRepository; strategy = defaultCheckoutStrategy): GitResultCode"><wbr />checkout<wbr />Head<span class="attachedType">GitRepository</span></a></li>
+  <li><a class="reference" href="#checkoutHead%2Cstring"
+    title="checkoutHead(path: string; strategy = defaultCheckoutStrategy): GitResultCode"><wbr />checkout<wbr />Head<span class="attachedType">GitResultCode</span></a></li>
   <li><a class="reference" href="#setHead%2CGitRepository%2Cstring"
     title="setHead(repo: GitRepository; short: string): GitResultCode"><wbr />set<wbr />Head<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#setHead%2Cstring%2Cstring"
     title="setHead(path: string; short: string): GitResultCode"><wbr />set<wbr />Head<span class="attachedType">GitResultCode</span></a></li>
+  <li><a class="reference" href="#referenceDWIM%2CGitRepository%2Cstring"
+    title="referenceDWIM(repo: GitRepository; short: string): GitResult[GitReference]"><wbr />reference<wbr />DWIM<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#referenceDWIM%2CGitReference%2CGitRepository%2Cstring"
     title="referenceDWIM(refer: var GitReference; repo: GitRepository; short: string): GitResultCode"><wbr />reference<wbr />DWIM<span class="attachedType">GitReference</span></a></li>
   <li><a class="reference" href="#referenceDWIM%2CGitReference%2Cstring%2Cstring"
     title="referenceDWIM(refer: var GitReference; path: string; short: string): GitResultCode"><wbr />reference<wbr />DWIM<span class="attachedType">GitReference</span></a></li>
-  <li><a class="reference" href="#checkoutHead%2Cstring"
-    title="checkoutHead(path: string; strategy = defaultCheckoutStrategy): GitResultCode"><wbr />checkout<wbr />Head<span class="attachedType">GitResultCode</span></a></li>
+  <li><a class="reference" href="#lookupTreeThing%2CGitRepository%2Cstring"
+    title="lookupTreeThing(repo: GitRepository; path = &quot;HEAD&quot;): GitResult[GitThing]"><wbr />lookup<wbr />Tree<wbr />Thing<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#lookupTreeThing%2CGitThing%2CGitRepository%2Cstring"
     title="lookupTreeThing(thing: var GitThing; repo: GitRepository; path = &quot;HEAD&quot;): GitResultCode"><wbr />lookup<wbr />Tree<wbr />Thing<span class="attachedType">GitThing</span></a></li>
   <li><a class="reference" href="#lookupTreeThing%2CGitThing%2Cstring%2Cstring"
     title="lookupTreeThing(thing: var GitThing; repository: string; path = &quot;HEAD&quot;): GitResultCode"><wbr />lookup<wbr />Tree<wbr />Thing<span class="attachedType">GitThing</span></a></li>
+  <li><a class="reference" href="#treeEntryByPath%2CGitThing%2Cstring"
+    title="treeEntryByPath(thing: GitThing; path: string): GitResult[GitTreeEntry]"><wbr />tree<wbr />Entry<wbr />By<wbr />Path<span class="attachedType">GitThing</span></a></li>
   <li><a class="reference" href="#treeEntryByPath%2CGitTreeEntry%2CGitThing%2Cstring"
     title="treeEntryByPath(entry: var GitTreeEntry; thing: GitThing; path: string): GitResultCode"><wbr />tree<wbr />Entry<wbr />By<wbr />Path<span class="attachedType">GitTreeEntry</span></a></li>
   <li><a class="reference" href="#treeEntryByPath%2CGitTreeEntry%2CGitRepository%2Cstring"
     title="treeEntryByPath(entry: var GitTreeEntry; repo: GitRepository; path: string): GitResultCode"><wbr />tree<wbr />Entry<wbr />By<wbr />Path<span class="attachedType">GitTreeEntry</span></a></li>
   <li><a class="reference" href="#treeEntryByPath%2CGitTreeEntry%2Cstring%2Cstring"
     title="treeEntryByPath(entry: var GitTreeEntry; at: string; path: string): GitResultCode"><wbr />tree<wbr />Entry<wbr />By<wbr />Path<span class="attachedType">GitTreeEntry</span></a></li>
+  <li><a class="reference" href="#treeEntryToThing%2CGitRepository%2CGitTreeEntry"
+    title="treeEntryToThing(repo: GitRepository; entry: GitTreeEntry): GitResult[GitThing]"><wbr />tree<wbr />Entry<wbr />To<wbr />Thing<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#treeEntryToThing%2CGitThing%2CGitRepository%2CGitTreeEntry"
     title="treeEntryToThing(thing: var GitThing; repo: GitRepository; entry: GitTreeEntry): GitResultCode"><wbr />tree<wbr />Entry<wbr />To<wbr />Thing<span class="attachedType">GitThing</span></a></li>
   <li><a class="reference" href="#treeEntryToThing%2CGitThing%2Cstring%2CGitTreeEntry"
@@ -1186,13 +1200,17 @@ function main() {
     title="treeWalk(tree: GitTree; mode: GitTreeWalkMode; callback: git_treewalk_cb;
          payload: pointer): GitResultCode"><wbr />tree<wbr />Walk<span class="attachedType">GitTree</span></a></li>
   <li><a class="reference" href="#treeWalk%2CGitTree%2CGitTreeWalkMode"
-    title="treeWalk(tree: GitTree; mode: GitTreeWalkMode): Option[GitTreeEntries]"><wbr />tree<wbr />Walk<span class="attachedType">GitTree</span></a></li>
+    title="treeWalk(tree: GitTree; mode: GitTreeWalkMode): GitResult[GitTreeEntries]"><wbr />tree<wbr />Walk<span class="attachedType">GitTree</span></a></li>
   <li><a class="reference" href="#treeWalk%2CGitThing"
-    title="treeWalk(tree: GitThing; mode = gtwPre): Option[GitTreeEntries]"><wbr />tree<wbr />Walk<span class="attachedType">GitThing</span></a></li>
+    title="treeWalk(tree: GitThing; mode = gtwPre): GitResult[GitTreeEntries]"><wbr />tree<wbr />Walk<span class="attachedType">GitThing</span></a></li>
+  <li><a class="reference" href="#newRevWalk%2CGitRepository"
+    title="newRevWalk(repo: GitRepository): GitResult[GitRevWalker]"><wbr />new<wbr />Rev<wbr />Walk<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#newRevWalk%2CGitRevWalker%2CGitRepository"
     title="newRevWalk(walker: var GitRevWalker; repo: GitRepository): GitResultCode"><wbr />new<wbr />Rev<wbr />Walk<span class="attachedType">GitRevWalker</span></a></li>
   <li><a class="reference" href="#newRevWalk%2CGitRevWalker%2Cstring"
     title="newRevWalk(walker: var GitRevWalker; path: string): GitResultCode"><wbr />new<wbr />Rev<wbr />Walk<span class="attachedType">GitRevWalker</span></a></li>
+  <li><a class="reference" href="#next%2CGitRevWalker"
+    title="next(walker: GitRevWalker): GitResult[git_oid]"><wbr />next<span class="attachedType">GitRevWalker</span></a></li>
   <li><a class="reference" href="#next%2Cgit_oid%2CGitRevWalker"
     title="next(oid: var git_oid; walker: GitRevWalker): GitResultCode"><wbr />next<span class="attachedType">GitResultCode</span></a></li>
   <li><a class="reference" href="#push%2CGitRevWalker%2CGitOid"
@@ -1221,7 +1239,13 @@ function main() {
 <li>
   <a class="reference reference-toplevel" href="#13" id="63">Funcs</a>
   <ul class="simple simple-toc-section">
-      <li><a class="reference" href="#%24%2CGitRepository"
+      <li><a class="reference" href="#name%2CGitTreeEntry"
+    title="name(entry: GitTreeEntry): string"><wbr />name<span class="attachedType">GitTreeEntry</span></a></li>
+  <li><a class="reference" href="#name%2CGitRemote"
+    title="name(remote: GitRemote): string"><wbr />name<span class="attachedType">GitRemote</span></a></li>
+  <li><a class="reference" href="#%24%2CGitRemote"
+    title="`$`(remote: GitRemote): string"><wbr />`$`<span class="attachedType">GitRemote</span></a></li>
+  <li><a class="reference" href="#%24%2CGitRepository"
     title="`$`(repo: GitRepository): string"><wbr />`$`<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#%24%2Cptr.git_buf"
     title="`$`(buffer: ptr git_buf): string"><wbr />`$`<span class="attachedType"></span></a></li>
@@ -1231,8 +1255,6 @@ function main() {
     title="`$`(oid: GitOid): string"><wbr />`$`<span class="attachedType">GitOid</span></a></li>
   <li><a class="reference" href="#%24%2CGitTag"
     title="`$`(tag: GitTag): string"><wbr />`$`<span class="attachedType">GitTag</span></a></li>
-  <li><a class="reference" href="#name%2CGitTreeEntry"
-    title="name(entry: GitTreeEntry): string"><wbr />name<span class="attachedType">GitTreeEntry</span></a></li>
   <li><a class="reference" href="#isTag%2CGitReference"
     title="isTag(got: GitReference): bool"><wbr />is<wbr />Tag<span class="attachedType">GitReference</span></a></li>
   <li><a class="reference" href="#name%2CGitReference"
@@ -1256,17 +1278,20 @@ function main() {
   <a class="reference reference-toplevel" href="#15" id="65">Iterators</a>
   <ul class="simple simple-toc-section">
       <li><a class="reference" href="#status.i%2CGitRepository%2CGitStatusShow"
-    title="status(repository: GitRepository; show: GitStatusShow; flags = defaultStatusFlags): GitStatus"><wbr />status<span class="attachedType">GitRepository</span></a></li>
+    title="status(repository: GitRepository; show: GitStatusShow; flags = defaultStatusFlags): GitResult[
+    GitStatus]"><wbr />status<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#status.i%2Cstring"
-    title="status(path: string; show = ssIndexAndWorkdir; flags = defaultStatusFlags): GitStatus"><wbr />status<span class="attachedType">GitStatus</span></a></li>
+    title="status(path: string; show = ssIndexAndWorkdir; flags = defaultStatusFlags): GitResult[
+    GitStatus]"><wbr />status<span class="attachedType">GitResult</span></a></li>
   <li><a class="reference" href="#revWalk.i%2CGitRepository%2CGitRevWalker%2CGitOid"
-    title="revWalk(repo: GitRepository; walker: GitRevWalker; start: GitOid): GitCommit"><wbr />rev<wbr />Walk<span class="attachedType">GitRepository</span></a></li>
+    title="revWalk(repo: GitRepository; walker: GitRevWalker; start: GitOid): tuple[
+    thing: GitThing, code: GitResultCode]"><wbr />rev<wbr />Walk<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#revWalk.i%2Cstring%2CGitRevWalker%2CGitOid"
     title="revWalk(path: string; walker: GitRevWalker; start: GitOid): GitCommit"><wbr />rev<wbr />Walk<span class="attachedType">GitCommit</span></a></li>
   <li><a class="reference" href="#commitsForSpec.i%2CGitRepository%2CopenArray%5Bstring%5D"
-    title="commitsForSpec(repo: GitRepository; spec: openArray[string]): GitCommit"><wbr />commits<wbr />For<wbr />Spec<span class="attachedType">GitRepository</span></a></li>
+    title="commitsForSpec(repo: GitRepository; spec: openArray[string]): GitResult[GitThing]"><wbr />commits<wbr />For<wbr />Spec<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#commitsForSpec.i%2Cstring%2CopenArray%5Bstring%5D"
-    title="commitsForSpec(path: string; spec: openArray[string]): GitCommit"><wbr />commits<wbr />For<wbr />Spec<span class="attachedType">GitCommit</span></a></li>
+    title="commitsForSpec(path: string; spec: openArray[string]): GitResult[GitThing]"><wbr />commits<wbr />For<wbr />Spec<span class="attachedType">GitResult</span></a></li>
   <li><a class="reference" href="#branches.i%2CGitRepository"
     title="branches(repo: GitRepository; flags = {gbtLocal, gbtRemote}): GitReference"><wbr />branches<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#branches.i%2Cstring"
@@ -1277,9 +1302,7 @@ function main() {
 <li>
   <a class="reference reference-toplevel" href="#18" id="68">Templates</a>
   <ul class="simple simple-toc-section">
-      <li><a class="reference" href="#dumpError.t%2CGitResultCode"
-    title="dumpError(code: GitResultCode)"><wbr />dump<wbr />Error<span class="attachedType">GitResultCode</span></a></li>
-  <li><a class="reference" href="#gitFail.t%2Ctyped%2CGitResultCode%2Cuntyped"
+      <li><a class="reference" href="#gitFail.t%2Ctyped%2CGitResultCode%2Cuntyped"
     title="gitFail(allocd: typed; code: GitResultCode; body: untyped)"><wbr />git<wbr />Fail<span class="attachedType">GitResultCode</span></a></li>
   <li><a class="reference" href="#gitFail.t%2CGitResultCode%2Cuntyped"
     title="gitFail(code: GitResultCode; body: untyped)"><wbr />git<wbr />Fail<span class="attachedType">GitResultCode</span></a></li>
@@ -1698,6 +1721,13 @@ function main() {
 
 
 </dd>
+<a id="dumpError,GitResultCode"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#dumpError%2CGitResultCode"><span class="Identifier">dumpError</span></a><span class="Other">(</span><span class="Identifier">code</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
 <a id="init"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#init"><span class="Identifier">init</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
@@ -1759,6 +1789,13 @@ function main() {
 <dd>
 
 
+
+</dd>
+<a id="url,GitRemote"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#url%2CGitRemote"><span class="Identifier">url</span></a><span class="Other">(</span><span class="Identifier">remote</span><span class="Other">:</span> <a href="gittyup.html#GitRemote"><span class="Identifier">GitRemote</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Uri</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+retrieve the url of a remote
 
 </dd>
 <a id="oid,GitTreeEntry"></a>
@@ -1902,11 +1939,11 @@ free a tag table
 
 
 </dd>
-<a id="toThing,GitCommit"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#toThing%2CGitCommit"><span class="Identifier">toThing</span></a><span class="Other">(</span><span class="Identifier">commit</span><span class="Other">:</span> <a href="gittyup.html#GitCommit"><span class="Identifier">GitCommit</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="commit,GitThing"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#commit%2CGitThing"><span class="Identifier">commit</span></a><span class="Other">(</span><span class="Identifier">thing</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitCommit"><span class="Identifier">GitCommit</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+turn a thing into its commit
 
 </dd>
 <a id="clone,Uri,string,string"></a>
@@ -1938,7 +1975,7 @@ point the repo's head at the given reference
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-open a repository by path
+open a repository by path; the repository must be freed
 
 </dd>
 <a id="openRepository,GitOpen,string"></a>
@@ -1957,21 +1994,27 @@ open a repository by path
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-fetch the reference for the repository's head
+fetch the reference for the repository's head; the reference must be freed
 
 </dd>
 <a id="repositoryHead,GitReference,GitRepository"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#repositoryHead%2CGitReference%2CGitRepository"><span class="Identifier">repositoryHead</span></a><span class="Other">(</span><span class="Identifier">head</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitReference"><span class="Identifier">GitReference</span></a><span class="Other">;</span> <span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 fetch the reference for the repository's head
 
 </dd>
 <a id="repositoryHead,GitReference,string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#repositoryHead%2CGitReference%2Cstring"><span class="Identifier">repositoryHead</span></a><span class="Other">(</span><span class="Identifier">head</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitReference"><span class="Identifier">GitReference</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#repositoryHead%2CGitReference%2Cstring"><span class="Identifier">repositoryHead</span></a><span class="Other">(</span><span class="Identifier">head</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitReference"><span class="Identifier">GitReference</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">deprecated</span><span class="Other">,</span>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 fetch the reference for the head of the repository at the given path
 
@@ -1984,25 +2027,39 @@ fetch the reference for the head of the repository at the given path
 alias for repositoryHead
 
 </dd>
-<a id="remoteLookup,GitRemote,GitRepository,string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#remoteLookup%2CGitRemote%2CGitRepository%2Cstring"><span class="Identifier">remoteLookup</span></a><span class="Other">(</span><span class="Identifier">remote</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitRemote"><span class="Identifier">GitRemote</span></a><span class="Other">;</span> <span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+<a id="remoteLookup,GitRepository,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#remoteLookup%2CGitRepository%2Cstring"><span class="Identifier">remoteLookup</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitRemote"><span class="Identifier">GitRemote</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+
+get the remote by name; the remote must be freed
+
+</dd>
+<a id="remoteLookup,GitRemote,GitRepository,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#remoteLookup%2CGitRemote%2CGitRepository%2Cstring"><span class="Identifier">remoteLookup</span></a><span class="Other">(</span><span class="Identifier">remote</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitRemote"><span class="Identifier">GitRemote</span></a><span class="Other">;</span> <span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 get the remote by name
 
 </dd>
 <a id="remoteLookup,GitRemote,string,string"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#remoteLookup%2CGitRemote%2Cstring%2Cstring"><span class="Identifier">remoteLookup</span></a><span class="Other">(</span><span class="Identifier">remote</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitRemote"><span class="Identifier">GitRemote</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 get the remote by name using a repository path
 
 </dd>
 <a id="remoteRename,GitRepository,string,string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#remoteRename%2CGitRepository%2Cstring%2Cstring"><span class="Identifier">remoteRename</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">prior</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">next</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#remoteRename%2CGitRepository%2Cstring%2Cstring"><span class="Identifier">remoteRename</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">prior</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">next</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span>
+    <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 rename a remote
@@ -2010,8 +2067,11 @@ rename a remote
 </dd>
 <a id="remoteRename,string,string,string"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#remoteRename%2Cstring%2Cstring%2Cstring"><span class="Identifier">remoteRename</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">prior</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">next</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 rename a remote in the repository at the given path
 
@@ -2025,34 +2085,44 @@ delete a remote from the repository
 
 </dd>
 <a id="remoteDelete,string,string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#remoteDelete%2Cstring%2Cstring"><span class="Identifier">remoteDelete</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#remoteDelete%2Cstring%2Cstring"><span class="Identifier">remoteDelete</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">deprecated</span><span class="Other">,</span>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 delete a remote from the repository at the given path
 
 </dd>
-<a id="remoteCreate,GitRemote,GitRepository,string,Uri"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#remoteCreate%2CGitRemote%2CGitRepository%2Cstring%2CUri"><span class="Identifier">remoteCreate</span></a><span class="Other">(</span><span class="Identifier">remote</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitRemote"><span class="Identifier">GitRemote</span></a><span class="Other">;</span> <span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+<a id="remoteCreate,GitRepository,string,Uri"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#remoteCreate%2CGitRepository%2Cstring%2CUri"><span class="Identifier">remoteCreate</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitRemote"><span class="Identifier">GitRemote</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 create a new remote in the repository
 
 </dd>
-<a id="remoteCreate,GitRemote,string,string,Uri"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#remoteCreate%2CGitRemote%2Cstring%2Cstring%2CUri"><span class="Identifier">remoteCreate</span></a><span class="Other">(</span><span class="Identifier">remote</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitRemote"><span class="Identifier">GitRemote</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="remoteCreate,GitRemote,GitRepository,string,Uri"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#remoteCreate%2CGitRemote%2CGitRepository%2Cstring%2CUri"><span class="Identifier">remoteCreate</span></a><span class="Other">(</span><span class="Identifier">remote</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitRemote"><span class="Identifier">GitRemote</span></a><span class="Other">;</span> <span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
-create a new remote in the repository at the given path
+create a new remote in the repository
 
 </dd>
-<a id="url,GitRemote"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#url%2CGitRemote"><span class="Identifier">url</span></a><span class="Other">(</span><span class="Identifier">remote</span><span class="Other">:</span> <a href="gittyup.html#GitRemote"><span class="Identifier">GitRemote</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Uri</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="remoteCreate,GitRemote,string,string,Uri"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#remoteCreate%2CGitRemote%2Cstring%2Cstring%2CUri"><span class="Identifier">remoteCreate</span></a><span class="Other">(</span><span class="Identifier">remote</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitRemote"><span class="Identifier">GitRemote</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">url</span><span class="Other">:</span> <span class="Identifier">Uri</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
-retrieve the url of a remote
+create a new remote in the repository at the given path
 
 </dd>
 <a id="==,GitOid,GitOid"></a>
@@ -2106,8 +2176,11 @@ try to look some thing up in the repository with the given name
 </dd>
 <a id="lookupThing,GitThing,string,string"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#lookupThing%2CGitThing%2Cstring%2Cstring"><span class="Identifier">lookupThing</span></a><span class="Other">(</span><span class="Identifier">thing</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 try to look some thing up in the repository at the given path
 
@@ -2128,9 +2201,13 @@ compose a table of tags and their associated references
 
 </dd>
 <a id="tagTable,string,GitTagTable"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#tagTable%2Cstring%2CGitTagTable"><span class="Identifier">tagTable</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitTagTable"><span class="Identifier">GitTagTable</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#tagTable%2Cstring%2CGitTagTable"><span class="Identifier">tagTable</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitTagTable"><span class="Identifier">GitTagTable</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">deprecated</span><span class="Other">,</span>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 compose a table of tags and their associated references
 
@@ -2151,9 +2228,9 @@ try to retrieve the #head oid from a repository
 
 </dd>
 <a id="getHeadOid,string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#getHeadOid%2Cstring"><span class="Identifier">getHeadOid</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span>
-    <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">ResultError[gittyup.GitResultCode]</span><span class="Other">,</span>
-    <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#getHeadOid%2Cstring"><span class="Identifier">getHeadOid</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span>
+    <span class="Identifier">ResultError[system.void]</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span>
+    <span class="Identifier">ResultError[gittyup.GitResultCode]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 try to retrieve the #head oid from a repository at the given path
@@ -2169,7 +2246,7 @@ fetch the state of a repository
 </dd>
 <a id="repositoryState,string"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#repositoryState%2Cstring"><span class="Identifier">repositoryState</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitRepoState"><span class="Identifier">GitRepoState</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 fetch the state of the repository at the given path
@@ -2187,7 +2264,7 @@ checkout a repository using a thing
 <a id="checkoutTree,GitRepository,string"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#checkoutTree%2CGitRepository%2Cstring"><span class="Identifier">checkoutTree</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">reference</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span>
                  <span class="Identifier">strategy</span> <span class="Other">=</span> <span class="Identifier">defaultCheckoutStrategy</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 checkout a repository using a reference string
@@ -2195,8 +2272,11 @@ checkout a repository using a reference string
 </dd>
 <a id="checkoutTree,string,string"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#checkoutTree%2Cstring%2Cstring"><span class="Identifier">checkoutTree</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">reference</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">strategy</span> <span class="Other">=</span> <span class="Identifier">defaultCheckoutStrategy</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 checkout a repository in the given path using a reference string
 
@@ -2209,6 +2289,17 @@ checkout a repository in the given path using a reference string
 checkout a repository's head
 
 </dd>
+<a id="checkoutHead,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#checkoutHead%2Cstring"><span class="Identifier">checkoutHead</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">strategy</span> <span class="Other">=</span> <span class="Identifier">defaultCheckoutStrategy</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
+
+checkout a repository's head in the given path using a reference string
+
+</dd>
 <a id="setHead,GitRepository,string"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#setHead%2CGitRepository%2Cstring"><span class="Identifier">setHead</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">short</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
@@ -2218,89 +2309,145 @@ set the head of a repository
 
 </dd>
 <a id="setHead,string,string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#setHead%2Cstring%2Cstring"><span class="Identifier">setHead</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">short</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#setHead%2Cstring%2Cstring"><span class="Identifier">setHead</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">short</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">deprecated</span><span class="Other">,</span>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 set the head of a repository at the given path
 
 </dd>
-<a id="referenceDWIM,GitReference,GitRepository,string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#referenceDWIM%2CGitReference%2CGitRepository%2Cstring"><span class="Identifier">referenceDWIM</span></a><span class="Other">(</span><span class="Identifier">refer</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitReference"><span class="Identifier">GitReference</span></a><span class="Other">;</span> <span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">short</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+<a id="referenceDWIM,GitRepository,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#referenceDWIM%2CGitRepository%2Cstring"><span class="Identifier">referenceDWIM</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">short</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitReference"><span class="Identifier">GitReference</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+
+turn a string into a reference
+
+</dd>
+<a id="referenceDWIM,GitReference,GitRepository,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#referenceDWIM%2CGitReference%2CGitRepository%2Cstring"><span class="Identifier">referenceDWIM</span></a><span class="Other">(</span><span class="Identifier">refer</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitReference"><span class="Identifier">GitReference</span></a><span class="Other">;</span> <span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">short</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 turn a string into a reference
 
 </dd>
 <a id="referenceDWIM,GitReference,string,string"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#referenceDWIM%2CGitReference%2Cstring%2Cstring"><span class="Identifier">referenceDWIM</span></a><span class="Other">(</span><span class="Identifier">refer</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitReference"><span class="Identifier">GitReference</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">short</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 turn a string into a reference
 
 </dd>
-<a id="checkoutHead,string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#checkoutHead%2Cstring"><span class="Identifier">checkoutHead</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">strategy</span> <span class="Other">=</span> <span class="Identifier">defaultCheckoutStrategy</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="lookupTreeThing,GitRepository,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#lookupTreeThing%2CGitRepository%2Cstring"><span class="Identifier">lookupTreeThing</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">path</span> <span class="Other">=</span> <span class="StringLit">&quot;HEAD&quot;</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-checkout a repository's head in the given path using a reference string
+convenience to lookup a thing with a tree type filter
 
 </dd>
 <a id="lookupTreeThing,GitThing,GitRepository,string"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#lookupTreeThing%2CGitThing%2CGitRepository%2Cstring"><span class="Identifier">lookupTreeThing</span></a><span class="Other">(</span><span class="Identifier">thing</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span> <span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">path</span> <span class="Other">=</span> <span class="StringLit">&quot;HEAD&quot;</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 
 
 </dd>
 <a id="lookupTreeThing,GitThing,string,string"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#lookupTreeThing%2CGitThing%2Cstring%2Cstring"><span class="Identifier">lookupTreeThing</span></a><span class="Other">(</span><span class="Identifier">thing</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span> <span class="Identifier">repository</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">path</span> <span class="Other">=</span> <span class="StringLit">&quot;HEAD&quot;</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 
 
 </dd>
-<a id="treeEntryByPath,GitTreeEntry,GitThing,string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#treeEntryByPath%2CGitTreeEntry%2CGitThing%2Cstring"><span class="Identifier">treeEntryByPath</span></a><span class="Other">(</span><span class="Identifier">entry</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitTreeEntry"><span class="Identifier">GitTreeEntry</span></a><span class="Other">;</span> <span class="Identifier">thing</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+<a id="treeEntryByPath,GitThing,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#treeEntryByPath%2CGitThing%2Cstring"><span class="Identifier">treeEntryByPath</span></a><span class="Other">(</span><span class="Identifier">thing</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitTreeEntry"><span class="Identifier">GitTreeEntry</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 get a tree entry using its path and that of the repo
 
 </dd>
+<a id="treeEntryByPath,GitTreeEntry,GitThing,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#treeEntryByPath%2CGitTreeEntry%2CGitThing%2Cstring"><span class="Identifier">treeEntryByPath</span></a><span class="Other">(</span><span class="Identifier">entry</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitTreeEntry"><span class="Identifier">GitTreeEntry</span></a><span class="Other">;</span> <span class="Identifier">thing</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
+
+
+
+</dd>
 <a id="treeEntryByPath,GitTreeEntry,GitRepository,string"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#treeEntryByPath%2CGitTreeEntry%2CGitRepository%2Cstring"><span class="Identifier">treeEntryByPath</span></a><span class="Other">(</span><span class="Identifier">entry</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitTreeEntry"><span class="Identifier">GitTreeEntry</span></a><span class="Other">;</span> <span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">,</span>
+                       <span class="Identifier">ResultError[gittyup.GitResultCode]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 get a tree entry using its path and that of the repo
 
 </dd>
 <a id="treeEntryByPath,GitTreeEntry,string,string"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#treeEntryByPath%2CGitTreeEntry%2Cstring%2Cstring"><span class="Identifier">treeEntryByPath</span></a><span class="Other">(</span><span class="Identifier">entry</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitTreeEntry"><span class="Identifier">GitTreeEntry</span></a><span class="Other">;</span> <span class="Identifier">at</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">,</span>
+                       <span class="Identifier">ResultError[gittyup.GitResultCode]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 get a tree entry using its path and that of the repo
 
 </dd>
-<a id="treeEntryToThing,GitThing,GitRepository,GitTreeEntry"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#treeEntryToThing%2CGitThing%2CGitRepository%2CGitTreeEntry"><span class="Identifier">treeEntryToThing</span></a><span class="Other">(</span><span class="Identifier">thing</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span> <span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">entry</span><span class="Other">:</span> <a href="gittyup.html#GitTreeEntry"><span class="Identifier">GitTreeEntry</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+<a id="treeEntryToThing,GitRepository,GitTreeEntry"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#treeEntryToThing%2CGitRepository%2CGitTreeEntry"><span class="Identifier">treeEntryToThing</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">entry</span><span class="Other">:</span> <a href="gittyup.html#GitTreeEntry"><span class="Identifier">GitTreeEntry</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 convert a tree entry into a thing
 
 </dd>
+<a id="treeEntryToThing,GitThing,GitRepository,GitTreeEntry"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#treeEntryToThing%2CGitThing%2CGitRepository%2CGitTreeEntry"><span class="Identifier">treeEntryToThing</span></a><span class="Other">(</span><span class="Identifier">thing</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span> <span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">entry</span><span class="Other">:</span> <a href="gittyup.html#GitTreeEntry"><span class="Identifier">GitTreeEntry</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
+
+convert a tree entry into a thing
+
+</dd>
 <a id="treeEntryToThing,GitThing,string,GitTreeEntry"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#treeEntryToThing%2CGitThing%2Cstring%2CGitTreeEntry"><span class="Identifier">treeEntryToThing</span></a><span class="Other">(</span><span class="Identifier">thing</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span> <span class="Identifier">at</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">entry</span><span class="Other">:</span> <a href="gittyup.html#GitTreeEntry"><span class="Identifier">GitTreeEntry</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 convert a tree entry into a thing using the repo at the given path
 
@@ -2314,7 +2461,7 @@ walk a tree and run a callback on every entry
 
 </dd>
 <a id="treeWalk,GitTree,GitTreeWalkMode"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#treeWalk%2CGitTree%2CGitTreeWalkMode"><span class="Identifier">treeWalk</span></a><span class="Other">(</span><span class="Identifier">tree</span><span class="Other">:</span> <a href="gittyup.html#GitTree"><span class="Identifier">GitTree</span></a><span class="Other">;</span> <span class="Identifier">mode</span><span class="Other">:</span> <a href="gittyup.html#GitTreeWalkMode"><span class="Identifier">GitTreeWalkMode</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="gittyup.html#GitTreeEntries"><span class="Identifier">GitTreeEntries</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+<dt><pre><span class="Keyword">proc</span> <a href="#treeWalk%2CGitTree%2CGitTreeWalkMode"><span class="Identifier">treeWalk</span></a><span class="Other">(</span><span class="Identifier">tree</span><span class="Other">:</span> <a href="gittyup.html#GitTree"><span class="Identifier">GitTree</span></a><span class="Other">;</span> <span class="Identifier">mode</span><span class="Other">:</span> <a href="gittyup.html#GitTreeWalkMode"><span class="Identifier">GitTreeWalkMode</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitTreeEntries"><span class="Identifier">GitTreeEntries</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
@@ -2322,27 +2469,48 @@ try to walk a tree and return a sequence of its entries
 
 </dd>
 <a id="treeWalk,GitThing"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#treeWalk%2CGitThing"><span class="Identifier">treeWalk</span></a><span class="Other">(</span><span class="Identifier">tree</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span> <span class="Identifier">mode</span> <span class="Other">=</span> <span class="Identifier">gtwPre</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="gittyup.html#GitTreeEntries"><span class="Identifier">GitTreeEntries</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+<dt><pre><span class="Keyword">proc</span> <a href="#treeWalk%2CGitThing"><span class="Identifier">treeWalk</span></a><span class="Other">(</span><span class="Identifier">tree</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span> <span class="Identifier">mode</span> <span class="Other">=</span> <span class="Identifier">gtwPre</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitTreeEntries"><span class="Identifier">GitTreeEntries</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 the laziest way to walk a tree, ever
 
 </dd>
-<a id="newRevWalk,GitRevWalker,GitRepository"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#newRevWalk%2CGitRevWalker%2CGitRepository"><span class="Identifier">newRevWalk</span></a><span class="Other">(</span><span class="Identifier">walker</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitRevWalker"><span class="Identifier">GitRevWalker</span></a><span class="Other">;</span> <span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="newRevWalk,GitRepository"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#newRevWalk%2CGitRepository"><span class="Identifier">newRevWalk</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitRevWalker"><span class="Identifier">GitRevWalker</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 instantiate a new walker
 
 </dd>
-<a id="newRevWalk,GitRevWalker,string"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#newRevWalk%2CGitRevWalker%2Cstring"><span class="Identifier">newRevWalk</span></a><span class="Other">(</span><span class="Identifier">walker</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitRevWalker"><span class="Identifier">GitRevWalker</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="newRevWalk,GitRevWalker,GitRepository"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#newRevWalk%2CGitRevWalker%2CGitRepository"><span class="Identifier">newRevWalk</span></a><span class="Other">(</span><span class="Identifier">walker</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitRevWalker"><span class="Identifier">GitRevWalker</span></a><span class="Other">;</span> <span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
+
+instantiate a new walker
+
+</dd>
+<a id="newRevWalk,GitRevWalker,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#newRevWalk%2CGitRevWalker%2Cstring"><span class="Identifier">newRevWalk</span></a><span class="Other">(</span><span class="Identifier">walker</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitRevWalker"><span class="Identifier">GitRevWalker</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">deprecated</span><span class="Other">,</span>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 instantiate a new walker from a repo at the given path
+
+</dd>
+<a id="next,GitRevWalker"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#next%2CGitRevWalker"><span class="Identifier">next</span></a><span class="Other">(</span><span class="Identifier">walker</span><span class="Other">:</span> <a href="gittyup.html#GitRevWalker"><span class="Identifier">GitRevWalker</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><span class="Identifier">git_oid</span><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+walk to the next node
 
 </dd>
 <a id="next,git_oid,GitRevWalker"></a>
@@ -2381,7 +2549,7 @@ create a new lightweight tag in the repository
 <a id="tagCreateLightweight,GitOid,string,string,GitThing"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#tagCreateLightweight%2CGitOid%2Cstring%2Cstring%2CGitThing"><span class="Identifier">tagCreateLightweight</span></a><span class="Other">(</span><span class="Identifier">oid</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">target</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span>
                          <span class="Identifier">force</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 create a new lightweight tag in the repository
@@ -2413,7 +2581,7 @@ try to fetch a single remote for a remote tracking branch
 </dd>
 <a id="branchRemoteName,GitBuf,string,string"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#branchRemoteName%2CGitBuf%2Cstring%2Cstring"><span class="Identifier">branchRemoteName</span></a><span class="Other">(</span><span class="Identifier">buffer</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitBuf"><span class="Identifier">GitBuf</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">branch</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 try to fetch a single remote for a remote tracking branch
@@ -2431,6 +2599,27 @@ true if the thing is tagged
 <div class="section" id="13">
 <h1><a class="toc-backref" href="#13">Funcs</a></h1>
 <dl class="item">
+<a id="name,GitTreeEntry"></a>
+<dt><pre><span class="Keyword">func</span> <a href="#name%2CGitTreeEntry"><span class="Identifier">name</span></a><span class="Other">(</span><span class="Identifier">entry</span><span class="Other">:</span> <a href="gittyup.html#GitTreeEntry"><span class="Identifier">GitTreeEntry</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
+<a id="name,GitRemote"></a>
+<dt><pre><span class="Keyword">func</span> <a href="#name%2CGitRemote"><span class="Identifier">name</span></a><span class="Other">(</span><span class="Identifier">remote</span><span class="Other">:</span> <a href="gittyup.html#GitRemote"><span class="Identifier">GitRemote</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
+<a id="$,GitRemote"></a>
+<dt><pre><span class="Keyword">func</span> <a href="#%24%2CGitRemote"><span class="Identifier">`$`</span></a><span class="Other">(</span><span class="Identifier">remote</span><span class="Other">:</span> <a href="gittyup.html#GitRemote"><span class="Identifier">GitRemote</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
 <a id="$,GitRepository"></a>
 <dt><pre><span class="Keyword">func</span> <a href="#%24%2CGitRepository"><span class="Identifier">`$`</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
@@ -2461,13 +2650,6 @@ true if the thing is tagged
 </dd>
 <a id="$,GitTag"></a>
 <dt><pre><span class="Keyword">func</span> <a href="#%24%2CGitTag"><span class="Identifier">`$`</span></a><span class="Other">(</span><span class="Identifier">tag</span><span class="Other">:</span> <a href="gittyup.html#GitTag"><span class="Identifier">GitTag</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-
-
-</dd>
-<a id="name,GitTreeEntry"></a>
-<dt><pre><span class="Keyword">func</span> <a href="#name%2CGitTreeEntry"><span class="Identifier">name</span></a><span class="Other">(</span><span class="Identifier">entry</span><span class="Other">:</span> <a href="gittyup.html#GitTreeEntry"><span class="Identifier">GitTreeEntry</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 
@@ -2536,23 +2718,29 @@ true if the thing is tagged
 <dl class="item">
 <a id="status.i,GitRepository,GitStatusShow"></a>
 <dt><pre><span class="Keyword">iterator</span> <a href="#status.i%2CGitRepository%2CGitStatusShow"><span class="Identifier">status</span></a><span class="Other">(</span><span class="Identifier">repository</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">show</span><span class="Other">:</span> <a href="gittyup.html#GitStatusShow"><span class="Identifier">GitStatusShow</span></a><span class="Other">;</span>
-               <span class="Identifier">flags</span> <span class="Other">=</span> <span class="Identifier">defaultStatusFlags</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitStatus"><span class="Identifier">GitStatus</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+               <span class="Identifier">flags</span> <span class="Other">=</span> <span class="Identifier">defaultStatusFlags</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitStatus"><span class="Identifier">GitStatus</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 iterate over files in the repo using the given search flags
 
 </dd>
 <a id="status.i,string"></a>
-<dt><pre><span class="Keyword">iterator</span> <a href="#status.i%2Cstring"><span class="Identifier">status</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">show</span> <span class="Other">=</span> <span class="Identifier">ssIndexAndWorkdir</span><span class="Other">;</span> <span class="Identifier">flags</span> <span class="Other">=</span> <span class="Identifier">defaultStatusFlags</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitStatus"><span class="Identifier">GitStatus</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">iterator</span> <a href="#status.i%2Cstring"><span class="Identifier">status</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">show</span> <span class="Other">=</span> <span class="Identifier">ssIndexAndWorkdir</span><span class="Other">;</span> <span class="Identifier">flags</span> <span class="Other">=</span> <span class="Identifier">defaultStatusFlags</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span>
+    <a href="gittyup.html#GitStatus"><span class="Identifier">GitStatus</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span>
+                                   <span class="Identifier">IOError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 for repository at path, yield status for each file which trips the flags
 
 </dd>
 <a id="revWalk.i,GitRepository,GitRevWalker,GitOid"></a>
-<dt><pre><span class="Keyword">iterator</span> <a href="#revWalk.i%2CGitRepository%2CGitRevWalker%2CGitOid"><span class="Identifier">revWalk</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">walker</span><span class="Other">:</span> <a href="gittyup.html#GitRevWalker"><span class="Identifier">GitRevWalker</span></a><span class="Other">;</span> <span class="Identifier">start</span><span class="Other">:</span> <a href="gittyup.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitCommit"><span class="Identifier">GitCommit</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">iterator</span> <a href="#revWalk.i%2CGitRepository%2CGitRevWalker%2CGitOid"><span class="Identifier">revWalk</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">walker</span><span class="Other">:</span> <a href="gittyup.html#GitRevWalker"><span class="Identifier">GitRevWalker</span></a><span class="Other">;</span> <span class="Identifier">start</span><span class="Other">:</span> <a href="gittyup.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">tuple</span><span class="Other">[</span>
+    <span class="Identifier">thing</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">,</span> <span class="Identifier">code</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span>
+    <span class="Identifier">ResultError[gittyup.GitResultCode]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 sic the walker on a repo starting with the given oid
@@ -2560,26 +2748,33 @@ sic the walker on a repo starting with the given oid
 </dd>
 <a id="revWalk.i,string,GitRevWalker,GitOid"></a>
 <dt><pre><span class="Keyword">iterator</span> <a href="#revWalk.i%2Cstring%2CGitRevWalker%2CGitOid"><span class="Identifier">revWalk</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">walker</span><span class="Other">:</span> <a href="gittyup.html#GitRevWalker"><span class="Identifier">GitRevWalker</span></a><span class="Other">;</span> <span class="Identifier">start</span><span class="Other">:</span> <a href="gittyup.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitCommit"><span class="Identifier">GitCommit</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">,</span>
+                       <span class="Identifier">ResultError[gittyup.GitResultCode]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 starting with the given oid, sic the walker on a repo at the given path
 
 </dd>
 <a id="commitsForSpec.i,GitRepository,openArray[string]"></a>
-<dt><pre><span class="Keyword">iterator</span> <a href="#commitsForSpec.i%2CGitRepository%2CopenArray%5Bstring%5D"><span class="Identifier">commitsForSpec</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">spec</span><span class="Other">:</span> <span class="Identifier">openArray</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitCommit"><span class="Identifier">GitCommit</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span>
-    <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ResultError[gittyup.GitResultCode]</span><span class="Other">,</span>
-    <span class="Identifier">ResultError[system.void]</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">iterator</span> <a href="#commitsForSpec.i%2CGitRepository%2CopenArray%5Bstring%5D"><span class="Identifier">commitsForSpec</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">spec</span><span class="Other">:</span> <span class="Identifier">openArray</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span>
+    <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ResultError[gittyup.GitResultCode]</span><span class="Other">,</span>
+                       <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 yield each commit that matches the provided pathspec
 
 </dd>
 <a id="commitsForSpec.i,string,openArray[string]"></a>
-<dt><pre><span class="Keyword">iterator</span> <a href="#commitsForSpec.i%2Cstring%2CopenArray%5Bstring%5D"><span class="Identifier">commitsForSpec</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">spec</span><span class="Other">:</span> <span class="Identifier">openArray</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitCommit"><span class="Identifier">GitCommit</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span>
-    <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">ResultError[gittyup.GitResultCode]</span><span class="Other">,</span>
-    <span class="Identifier">ResultError[system.void]</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">iterator</span> <a href="#commitsForSpec.i%2Cstring%2CopenArray%5Bstring%5D"><span class="Identifier">commitsForSpec</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">spec</span><span class="Other">:</span> <span class="Identifier">openArray</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">deprecated</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span>
+                       <span class="Identifier">ResultError[gittyup.GitResultCode]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
 
 yield each commit that matches the provided pathspec
 
@@ -2594,7 +2789,8 @@ this time, you're just gonna have to guess at what this proc might do...
 </dd>
 <a id="branches.i,string"></a>
 <dt><pre><span class="Keyword">iterator</span> <a href="#branches.i%2Cstring"><span class="Identifier">branches</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">flags</span> <span class="Other">=</span> <span class="Other">{</span><span class="Identifier">gbtLocal</span><span class="Other">,</span> <span class="Identifier">gbtRemote</span><span class="Other">}</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitReference"><span class="Identifier">GitReference</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 we've been here before
@@ -2605,13 +2801,6 @@ we've been here before
 <div class="section" id="18">
 <h1><a class="toc-backref" href="#18">Templates</a></h1>
 <dl class="item">
-<a id="dumpError.t,GitResultCode"></a>
-<dt><pre><span class="Keyword">template</span> <a href="#dumpError.t%2CGitResultCode"><span class="Identifier">dumpError</span></a><span class="Other">(</span><span class="Identifier">code</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a><span class="Other">)</span></pre></dt>
-<dd>
-
-
-
-</dd>
 <a id="gitFail.t,typed,GitResultCode,untyped"></a>
 <dt><pre><span class="Keyword">template</span> <a href="#gitFail.t%2Ctyped%2CGitResultCode%2Cuntyped"><span class="Identifier">gitFail</span></a><span class="Other">(</span><span class="Identifier">allocd</span><span class="Other">:</span> <span class="Identifier">typed</span><span class="Other">;</span> <span class="Identifier">code</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a><span class="Other">;</span> <span class="Identifier">body</span><span class="Other">:</span> <span class="Identifier">untyped</span><span class="Other">)</span></pre></dt>
 <dd>
@@ -2685,7 +2874,7 @@ a version of gitTrap that expects failure; no error messages!
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2020-01-01 04:50:49 UTC</small>
+        <small>Made with Nim. Generated: 2020-01-02 05:12:56 UTC</small>
       </div>
     </div>
   </div>
