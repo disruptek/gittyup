@@ -25,8 +25,8 @@ else:
   {.fatal: "libgit2 version `" & git2SetVer & "` unsupported".}
 
 import nimgit2
-import result
-export result
+import result except ok, err
+export result except ok, err
 
 # there are some name changes between the 0.28 and later versions
 when compiles(git_clone_init_options):
