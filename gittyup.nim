@@ -351,6 +351,7 @@ type
   GitResult*[T] = Result[T, GitResultCode]
 
 template grc(code: cint): GitResultCode = cast[GitResultCode](code.ord)
+template grc(code: GitResultCode): GitResultCode = code
 template gec(code: cint): GitErrorClass = cast[GitErrorClass](code.ord)
 
 proc hash*(gcs: GitCheckoutStrategy): Hash = gcs.ord.hash
@@ -424,6 +425,11 @@ template ok*(self: var GitResult; x: auto) = result.ok(self.Result, x)
 template err*(self: var GitResult; x: auto) = result.err(self.Result, x)
 template ok*[T](v: T): auto = typeof(result).ok(v)
 template err*[T](v: T): auto = typeof(result).err(v)
+template newResult[T](code: GitResultCode): GitResult[T] =
+  (var result = GitResult[T](); result.err code; result)
+template newResult[T](value: T): GitResult[T] =
+  (var result = GitResult[T](); result.ok value; result)
+
 #template `:=`(v: untyped{nkIdent}; vv: Result): bool =
 #  (let vr = vv; template v: auto = unsafeGet(vr); vr.isOk)
 
@@ -472,6 +478,13 @@ template withGit(body: untyped) =
         raise newException(OSError, "unable to shut git")
   body
 
+template setResultAsError(code: typed) =
+  when declaredInScope(result):
+    when result is GitResultCode:
+      result = grc(code)
+    elif result of GitResult:
+      result.err grc(code)
+
 template withGitRepoAt(path: string; body: untyped) =
   ## run the body, opening `repo` at the given `path`.
   ## sets the proper return value in the event of error.
@@ -479,11 +492,7 @@ template withGitRepoAt(path: string; body: untyped) =
   withGit:
     block:
       repository := openRepository(path):
-        when declaredInScope(result):
-          when result is GitResultCode:
-            result = code
-          when result of GitResult:
-            result.err code
+        setResultAsError(code)
         break
       var repo {.inject.} = repository
       body
@@ -494,21 +503,18 @@ template withResultOf(gitsaid: cint; body: untyped) =
   if grc(gitsaid) == grcOk:
     body
   else:
-    discard
-    when declaredInScope(result):
-      when result is GitResultCode:
-        result = grc(gitsaid)
-      when result of GitResult:
-        result.err grc(gitsaid)
+    setResultAsError(gitsaid)
 
 template demandGitRepoAt(path: string; body: untyped) =
   withGit:
-    var open: GitOpen
-    gitTrap open, openRepository(open, path):
-      let emsg = &"error opening repository {path}"
-      raise newException(IOError, emsg)
-    var repo {.inject.} = open.repo
-    body
+    block:
+      repository := openRepository(path):
+        # quirky-esque exception purposes
+        setResultAsError(code)
+        let emsg = &"error opening {path}: {code}"
+        raise newException(IOError, emsg)
+      var repo {.inject.} = repository
+      body
 
 proc free*[T: GitHeapGits](point: ptr T) =
   withGit:
@@ -867,50 +873,64 @@ proc remoteLookup*(remote: var GitRemote; repo: GitRepository;
     result = git_remote_lookup(addr remote, repo, name).grc
 
 proc remoteLookup*(remote: var GitRemote; path: string;
-                   name: string): GitResultCode =
+                   name: string): GitResultCode {.deprecated.} =
   ## get the remote by name using a repository path
   withGitRepoAt(path):
     result = remoteLookup(remote, repo, name)
 
 proc remoteRename*(repo: GitRepository; prior: string;
-                   next: string): GitResultCode =
+                   next: string): GitResult[seq[string]] =
   ## rename a remote
-  var
-    list: git_strarray
   withGit:
-    result = git_remote_rename(addr list, repo, prior, next).grc
-    if result == grcOk:
+    var
+      list: git_strarray
+    withResultOf git_remote_rename(addr list, repo, prior, next):
       defer:
         git_strarray_free(addr list)
-      if list.count > 0'u:
-        let problems = cstringArrayToSeq(cast[cstringArray](list.strings),
-                                         list.count)
-        for problem in problems.items:
-          warn problem
+      if list.count == 0'u:
+        result.ok newSeq[string]()
+      else:
+        result.ok cstringArrayToSeq(cast[cstringArray](list.strings),
+                                    list.count)
 
-proc remoteRename*(path: string; prior: string; next: string): GitResultCode =
+proc remoteRename*(path: string; prior: string; next: string): GitResultCode
+  {.deprecated.} =
   ## rename a remote in the repository at the given path
   withGitRepoAt(path):
-    result = remoteRename(repo, prior, next)
+    let
+      rename = repo.remoteRename(prior, next)
+    if rename.isOk:
+      result = grcOk
+    else:
+      result = rename.error
 
 proc remoteDelete*(repo: GitRepository; name: string): GitResultCode =
   ## delete a remote from the repository
   withGit:
     result = git_remote_delete(repo, name).grc
 
-proc remoteDelete*(path: string; name: string): GitResultCode =
+proc remoteDelete*(path: string; name: string): GitResultCode {.deprecated.} =
   ## delete a remote from the repository at the given path
   withGitRepoAt(path):
     result = remoteDelete(repo, name)
 
+proc remoteCreate*(repo: GitRepository; name: string;
+                   url: Uri): GitResult[GitRemote] =
+  ## create a new remote in the repository
+  withGit:
+    var
+      remote: GitRemote
+    withResultOf git_remote_create(addr remote, repo, name, $url):
+      result.ok remote
+
 proc remoteCreate*(remote: var GitRemote; repo: GitRepository;
-                   name: string; url: Uri): GitResultCode =
+                   name: string; url: Uri): GitResultCode {.deprecated.} =
   ## create a new remote in the repository
   withGit:
     result = git_remote_create(addr remote, repo, name, $url).grc
 
 proc remoteCreate*(remote: var GitRemote; path: string;
-                   name: string; url: Uri): GitResultCode =
+                   name: string; url: Uri): GitResultCode {.deprecated.} =
   ## create a new remote in the repository at the given path
   withGitRepoAt(path):
     result = remoteCreate(remote, repo, name, url)
@@ -973,7 +993,7 @@ proc lookupThing*(thing: var GitThing; repo: GitRepository;
       thing = newThing(obj)
 
 proc lookupThing*(thing: var GitThing; path: string;
-                  name: string): GitResultCode =
+                  name: string): GitResultCode {.deprecated.} =
   ## try to look some thing up in the repository at the given path
   withGitRepoAt(path):
     result = lookupThing(thing, repo, name)
@@ -1012,7 +1032,8 @@ proc tagTable*(repo: GitRepository; tags: var GitTagTable): GitResultCode =
           continue
       tags.add name, target
 
-proc tagTable*(path: string; tags: var GitTagTable): GitResultCode =
+proc tagTable*(path: string; tags: var GitTagTable): GitResultCode
+  {.deprecated.} =
   ## compose a table of tags and their associated references
   withGitRepoAt(path):
     result = repo.tagTable(tags)
@@ -1054,7 +1075,7 @@ proc repositoryState*(path: string): GitRepoState =
 
 when hasWorkingStatus == true:
   iterator status*(repository: GitRepository; show: GitStatusShow;
-                   flags = defaultStatusFlags): GitStatus =
+                   flags = defaultStatusFlags): GitResult[GitStatus] =
     ## iterate over files in the repo using the given search flags
     withGit:
       var
@@ -1064,14 +1085,21 @@ when hasWorkingStatus == true:
         options.free
 
       block:
-        if grcOk != grc(git_status_options_init(options, GIT_STATUS_OPTIONS_VERSION)):
+        var
+          code = git_status_options_init(options, GIT_STATUS_OPTIONS_VERSION).grc
+        if code != grcOk:
+          # throw the error code
+          yield newResult[GitStatus](code)
           break
 
         options.show = cast[git_status_show_t](show)
         for flag in flags.items:
           options.flags = bitand(options.flags.uint, flag.ord.uint).cuint
 
-        if grcOk != git_status_list_new(addr statum, repository, options).grc:
+        code = git_status_list_new(addr statum, repository, options).grc
+        if code != grcOk:
+          # throw the error code
+          yield newResult[GitStatus](code)
           break
         defer:
           statum.free
@@ -1079,7 +1107,7 @@ when hasWorkingStatus == true:
         let
           count = git_status_list_entrycount(statum)
         for index in 0 ..< count:
-          yield git_status_byindex(statum, index.cuint)
+          yield newResult[GitStatus](git_status_byindex(statum, index.cuint))
 
 else:
   iterator status*(repository: GitRepository; show: GitStatusShow;
@@ -1087,7 +1115,7 @@ else:
     raise newException(ValueError, "you need a newer libgit2 to do that")
 
 iterator status*(path: string; show = ssIndexAndWorkdir;
-                 flags = defaultStatusFlags): GitStatus =
+                 flags = defaultStatusFlags): GitResult[GitStatus] =
   ## for repository at path, yield status for each file which trips the flags
   demandGitRepoAt(path):
     for entry in status(repo, show, flags):
@@ -1217,7 +1245,8 @@ proc lookupTreeThing*(thing: var GitThing;
     result = thing.lookupThing(repo, path & "^{tree}")
 
 proc lookupTreeThing*(thing: var GitThing;
-                      repository: string; path = "HEAD"): GitResultCode =
+                      repository: string; path = "HEAD"): GitResultCode
+  {.deprecated.} =
   withGitRepoAt(repository):
     result = thing.lookupThing(repo, path & "^{tree}")
 
