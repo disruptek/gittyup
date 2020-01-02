@@ -1111,7 +1111,7 @@ when hasWorkingStatus == true:
 
 else:
   iterator status*(repository: GitRepository; show: GitStatusShow;
-                   flags = defaultStatusFlags): GitStatus =
+                   flags = defaultStatusFlags): GitResult[GitStatus] =
     raise newException(ValueError, "you need a newer libgit2 to do that")
 
 iterator status*(path: string; show = ssIndexAndWorkdir;
