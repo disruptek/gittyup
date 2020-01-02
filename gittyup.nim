@@ -497,7 +497,7 @@ template withGitRepoAt(path: string; body: untyped) =
       var repo {.inject.} = repository
       body
 
-template withResultOf(gitsaid: cint; body: untyped) =
+template withResultOf(gitsaid: cint | GitResultCode; body: untyped) =
   ## when git said there was an error, set the result code;
   ## else, run the body
   if grc(gitsaid) == grcOk:
@@ -779,14 +779,18 @@ proc kind(obj: GitObject): GitObjectKind =
       typeName = $(git_object_type(obj).git_object_type2string)
     result = parseEnum[GitObjectKind](typeName)
 
-proc newThing(obj: GitObject): GitThing =
-  try:
-    result = GitThing(kind: obj.kind, o: obj)
-  except:
-    result = GitThing(kind: goAny, o: obj)
+proc commit*(thing: GitThing): GitCommit =
+  ## turn a thing into its commit
+  assert thing.kind == goCommit
+  result = cast[GitCommit](thing.o)
 
-proc toThing*(commit: GitCommit): GitThing =
-  result = newThing(cast[GitObject](commit))
+proc newThing(obj: GitObject | GitCommit | GitTag): GitThing =
+  ## wrap a git object as a thing
+  try:
+    result = GitThing(kind: cast[GitObject](obj).kind,
+                      o: cast[GitObject](obj))
+  except:
+    result = GitThing(kind: goAny, o: cast[GitObject](obj))
 
 proc clone*(uri: Uri; path: string; branch = ""): GitResult[GitRepository] =
   ## clone a repository
@@ -1079,7 +1083,6 @@ when hasWorkingStatus == true:
     ## iterate over files in the repo using the given search flags
     withGit:
       var
-        statum: GitStatusList
         options = cast[ptr git_status_options](sizeof(git_status_options).alloc)
       defer:
         options.free
@@ -1092,22 +1095,27 @@ when hasWorkingStatus == true:
           yield newResult[GitStatus](code)
           break
 
+        # add the options specified by the user
         options.show = cast[git_status_show_t](show)
         for flag in flags.items:
           options.flags = bitand(options.flags.uint, flag.ord.uint).cuint
 
+        # create a new iterator
+        var
+          statum: GitStatusList
         code = git_status_list_new(addr statum, repository, options).grc
         if code != grcOk:
           # throw the error code
           yield newResult[GitStatus](code)
           break
+        # remember to free it
         defer:
           statum.free
 
-        let
-          count = git_status_list_entrycount(statum)
-        for index in 0 ..< count:
-          yield newResult[GitStatus](git_status_byindex(statum, index.cuint))
+        # iterate over the status list by entry index
+        for index in 0 ..< git_status_list_entrycount(statum):
+          # and yield a status object result per each
+          yield newResult(git_status_byindex(statum, index.cuint))
 
 else:
   iterator status*(repository: GitRepository; show: GitStatusShow;
@@ -1115,7 +1123,8 @@ else:
     raise newException(ValueError, "you need a newer libgit2 to do that")
 
 iterator status*(path: string; show = ssIndexAndWorkdir;
-                 flags = defaultStatusFlags): GitResult[GitStatus] =
+                 flags = defaultStatusFlags): GitResult[GitStatus]
+  {.deprecated.} =
   ## for repository at path, yield status for each file which trips the flags
   demandGitRepoAt(path):
     for entry in status(repo, show, flags):
@@ -1173,16 +1182,15 @@ proc checkoutTree*(repo: GitRepository; reference: string;
                    strategy = defaultCheckoutStrategy): GitResultCode =
   ## checkout a repository using a reference string
   withGit:
-    var
-      thing: GitThing
-    result = lookupThing(thing, repo, reference)
-    if result == grcOk:
-      defer:
-        thing.free
-      result = checkoutTree(repo, thing, strategy = strategy)
+    block:
+      thing := repo.lookupThing(reference):
+        setResultAsError(code)
+        break
+      result = repo.checkoutTree(thing, strategy = strategy)
 
 proc checkoutTree*(path: string; reference: string;
-                   strategy = defaultCheckoutStrategy): GitResultCode =
+                   strategy = defaultCheckoutStrategy): GitResultCode
+  {.deprecated.} =
   ## checkout a repository in the given path using a reference string
   withGitRepoAt(path):
     result = checkoutTree(repo, reference, strategy = strategy)
@@ -1211,38 +1219,53 @@ proc checkoutHead*(repo: GitRepository;
       if result != grcOk:
         break
 
+proc checkoutHead*(path: string;
+                   strategy = defaultCheckoutStrategy): GitResultCode
+  {.deprecated.} =
+  ## checkout a repository's head in the given path using a reference string
+  withGitRepoAt(path):
+    result = checkoutHead(repo, strategy = strategy)
+
 proc setHead*(repo: GitRepository; short: string): GitResultCode =
   ## set the head of a repository
   withGit:
     result = git_repository_set_head(repo, short.cstring).grc
 
-proc setHead*(path: string; short: string): GitResultCode =
+proc setHead*(path: string; short: string): GitResultCode {.deprecated.} =
   ## set the head of a repository at the given path
   withGitRepoAt(path):
     result = repo.setHead(short)
 
+proc referenceDWIM*(repo: GitRepository;
+                    short: string): GitResult[GitReference] =
+  ## turn a string into a reference
+  withGit:
+    var
+      refer: GitReference
+    withResultOf git_reference_dwim(addr refer, repo, short):
+      result.ok refer
+
 proc referenceDWIM*(refer: var GitReference;
                     repo: GitRepository;
-                    short: string): GitResultCode =
+                    short: string): GitResultCode {.deprecated.} =
   ## turn a string into a reference
   withGit:
     result = git_reference_dwim(addr refer, repo, short).grc
 
 proc referenceDWIM*(refer: var GitReference; path: string;
-                    short: string): GitResultCode =
+                    short: string): GitResultCode {.deprecated.} =
   ## turn a string into a reference
   withGitRepoAt(path):
     result = referenceDWIM(refer, repo, short)
 
-proc checkoutHead*(path: string;
-                   strategy = defaultCheckoutStrategy): GitResultCode =
-  ## checkout a repository's head in the given path using a reference string
-  withGitRepoAt(path):
-    result = checkoutHead(repo, strategy = strategy)
+proc lookupTreeThing*(repo: GitRepository; path = "HEAD"): GitResult[GitThing] =
+  ## convenience to lookup a thing with a tree type filter
+  result = lookupThing(repo, path & "^{tree}")
 
 proc lookupTreeThing*(thing: var GitThing;
-                      repo: GitRepository; path = "HEAD"): GitResultCode =
-    result = thing.lookupThing(repo, path & "^{tree}")
+                      repo: GitRepository; path = "HEAD"): GitResultCode
+  {.deprecated.} =
+  result = thing.lookupThing(repo, path & "^{tree}")
 
 proc lookupTreeThing*(thing: var GitThing;
                       repository: string; path = "HEAD"): GitResultCode
@@ -1250,41 +1273,59 @@ proc lookupTreeThing*(thing: var GitThing;
   withGitRepoAt(repository):
     result = thing.lookupThing(repo, path & "^{tree}")
 
-proc treeEntryByPath*(entry: var GitTreeEntry; thing: GitThing;
-                      path: string): GitResultCode =
+proc treeEntryByPath*(thing: GitThing; path: string): GitResult[GitTreeEntry] =
   ## get a tree entry using its path and that of the repo
   withGit:
     var
       leaf: GitTreeEntry
     # get the entry by path using the thing as a tree
-    result = git_tree_entry_bypath(addr leaf, cast[GitTree](thing.o), path).grc
-    if result == grcOk:
+    withResultOf git_tree_entry_bypath(addr leaf, cast[GitTree](thing.o), path):
       defer:
         leaf.free
       # if it's okay, we have to make a copy of it that the user can free,
       # because when our thing is freed, it will invalidate the leaf var.
-      result = git_tree_entry_dup(addr entry, leaf).grc
+      var
+        entry: GitTreeEntry
+      withResultOf git_tree_entry_dup(addr entry, leaf):
+        result.ok entry
+
+proc treeEntryByPath*(entry: var GitTreeEntry; thing: GitThing;
+                      path: string): GitResultCode {.deprecated.} =
+  block:
+    tree := thing.treeEntryByPath(path):
+      result = code
+      break
+    entry = tree
 
 proc treeEntryByPath*(entry: var GitTreeEntry; repo: GitRepository;
-                      path: string): GitResultCode =
+                      path: string): GitResultCode {.deprecated.} =
   ## get a tree entry using its path and that of the repo
   withGit:
-    var thing: GitThing
-    result = thing.lookupTreeThing(repo, path = "HEAD")
-    if result != grcOk:
-      warn &"unable to lookup HEAD for {path}"
-    else:
-      defer: thing.free
-      result = treeEntryByPath(entry, thing, path)
+    block:
+      let
+        thing = repo.lookupTreeThing(path = "HEAD")
+      if thing.isErr:
+        result = thing.error
+      else:
+        result = treeEntryByPath(entry, thing.get, path)
 
 proc treeEntryByPath*(entry: var GitTreeEntry; at: string;
-                      path: string): GitResultCode =
+                      path: string): GitResultCode {.deprecated.} =
   ## get a tree entry using its path and that of the repo
   withGitRepoAt(at):
     result = treeEntryByPath(entry, repo, path)
 
+proc treeEntryToThing*(repo: GitRepository;
+                       entry: GitTreeEntry): GitResult[GitThing] =
+  ## convert a tree entry into a thing
+  withGit:
+    var
+      obj: GitObject
+    withResultOf git_tree_entry_to_object(addr obj, repo, entry):
+      result.ok newThing(obj)
+
 proc treeEntryToThing*(thing: var GitThing; repo: GitRepository;
-                       entry: GitTreeEntry): GitResultCode =
+                       entry: GitTreeEntry): GitResultCode {.deprecated.} =
   ## convert a tree entry into a thing
   withGit:
     var obj: GitObject
@@ -1293,7 +1334,7 @@ proc treeEntryToThing*(thing: var GitThing; repo: GitRepository;
       thing = newThing(obj)
 
 proc treeEntryToThing*(thing: var GitThing; at: string;
-                       entry: GitTreeEntry): GitResultCode =
+                       entry: GitTreeEntry): GitResultCode {.deprecated.} =
   ## convert a tree entry into a thing using the repo at the given path
   withGitRepoAt(at):
     result = treeEntryToThing(thing, repo, entry)
@@ -1303,41 +1344,59 @@ proc treeWalk*(tree: GitTree; mode: GitTreeWalkMode;
                payload: pointer): GitResultCode =
   ## walk a tree and run a callback on every entry
   withGit:
-    result = git_tree_walk(tree,
-                           cast[git_treewalk_mode](mode.ord.cint),
+    result = git_tree_walk(tree, cast[git_treewalk_mode](mode.ord.cint),
                            callback, payload).grc
 
 proc treeWalk*(tree: GitTree;
-               mode: GitTreeWalkMode): Option[GitTreeEntries] =
+               mode: GitTreeWalkMode): GitResult[GitTreeEntries] =
   ## try to walk a tree and return a sequence of its entries
   withGit:
     var
       entries: GitTreeEntries
 
-  proc walk(root: cstring; entry: ptr git_tree_entry;
-             payload: pointer): cint {.exportc.} =
-    # a good way to get a round
-    var dupe: GitTreeEntry
-    if git_tree_entry_dup(addr dupe, entry).grc == grcOk:
-      cast[var GitTreeEntries](payload).add dupe
+    proc walk(root: cstring; entry: ptr git_tree_entry;
+               payload: pointer): cint {.exportc.} =
+      # a good way to get a round; return !0 to stop iteration
+      var
+        dupe: GitTreeEntry
+      withResultOf git_tree_entry_dup(addr dupe, entry):
+        cast[var GitTreeEntries](payload).add dupe
 
-  if grcOk == tree.treeWalk(mode, cast[git_treewalk_cb](walk),
-                            payload = addr entries):
-    result = entries.some
+    withResultOf tree.treeWalk(mode, cast[git_treewalk_cb](walk),
+                               payload = addr entries):
+      result.ok entries
 
-proc treeWalk*(tree: GitThing; mode = gtwPre): Option[GitTreeEntries] =
+proc treeWalk*(tree: GitThing; mode = gtwPre): GitResult[GitTreeEntries] =
   ## the laziest way to walk a tree, ever
   result = treeWalk(cast[GitTree](tree.o), mode)
 
-proc newRevWalk*(walker: var GitRevWalker; repo: GitRepository): GitResultCode =
+proc newRevWalk*(repo: GitRepository): GitResult[GitRevWalker] =
+  ## instantiate a new walker
+  withGit:
+    var
+      walker: GitRevWalker
+    withResultOf git_revwalk_new(addr walker, repo):
+      result.ok walker
+
+proc newRevWalk*(walker: var GitRevWalker;
+                 repo: GitRepository): GitResultCode {.deprecated.} =
   ## instantiate a new walker
   withGit:
     result = git_revwalk_new(addr walker, repo).grc
 
-proc newRevWalk*(walker: var GitRevWalker; path: string): GitResultCode =
+proc newRevWalk*(walker: var GitRevWalker; path: string): GitResultCode
+  {.deprecated.} =
   ## instantiate a new walker from a repo at the given path
   withGitRepoAt(path):
     result = newRevWalk(walker, repo)
+
+proc next*(walker: GitRevWalker): GitResult[git_oid] =
+  ## walk to the next node
+  withGit:
+    var
+      oid: git_oid
+    withResultOf git_revwalk_next(addr oid, walker):
+      result.ok oid
 
 proc next*(oid: var git_oid; walker: GitRevWalker): GitResultCode =
   ## walk to the next node
@@ -1349,27 +1408,32 @@ proc push*(walker: var GitRevWalker; oid: GitOid): GitResultCode =
   withGit:
     result = git_revwalk_push(walker, oid).grc
 
-iterator revWalk*(repo: GitRepository; walker: GitRevWalker;
-                  start: GitOid): GitCommit =
+iterator revWalk*(repo: GitRepository; walker: GitRevWalker; start: GitOid):
+                  tuple[thing: GitThing; code: GitResultCode] =
   ## sic the walker on a repo starting with the given oid
   withGit:
     var
-      oid = cast[git_oid](start[])
+      oid = start[]
       commit: GitCommit
     while true:
-      gitTrap commit, git_commit_lookup(addr commit, repo, addr oid).grc:
-        warn &"unexpected error while walking {oid}:"
-        dumpError()
+      let
+        code = git_commit_lookup(addr commit, repo, addr oid).grc
+      if code == grcOk:
+        yield (thing: newThing(commit), code: code)
+      else:
+        yield (thing: nil, code: code)
+      let
+        future = walker.next
+      if future.isErr:
         break
-      yield commit
-      gitTrap next(oid, walker):
-        break
+      oid = future.get
 
-iterator revWalk*(path: string; walker: GitRevWalker; start: GitOid): GitCommit =
+iterator revWalk*(path: string; walker: GitRevWalker;
+                  start: GitOid): GitCommit {.deprecated.} =
   ## starting with the given oid, sic the walker on a repo at the given path
   withGitRepoAt(path):
-    for commit in revWalk(repo, walker, start):
-      yield commit
+    for commit, code in repo.revWalk(walker, start):
+      yield commit.commit
 
 proc newPathSpec*(ps: var GitPathSpec; spec: openArray[string]): GitResultCode =
   ## instantiate a new path spec from a strarray
@@ -1419,7 +1483,7 @@ proc matchWithParent(commit: ptr git_commit; nth: cuint;
       result = grcNotFound
 
 iterator commitsForSpec*(repo: GitRepository;
-                         spec: openArray[string]): GitCommit =
+                         spec: openArray[string]): GitResult[GitThing] =
   ## yield each commit that matches the provided pathspec
   withGit:
     var
@@ -1431,7 +1495,6 @@ iterator commitsForSpec*(repo: GitRepository;
       var
         ps: GitPathSpec
         walker: GitRevWalker
-        grc: GitResultCode
 
       # options for matching against n parent trees
       if grcOk != git_diff_options_init(options, GIT_DIFF_OPTIONS_VERSION).grc:
@@ -1460,15 +1523,20 @@ iterator commitsForSpec*(repo: GitRepository;
         break
 
       # iterate over ALL the commits
-      for commit in repo.revWalk(walker, head.get):
+      for thing, code in repo.revWalk(walker, head.get):
+        # if there's an error, yield it
+        if code != grcOk:
+          yield newResult[GitThing](code)
+          continue
+
         let
-          parents = git_commit_parentcount(commit)
+          parents = git_commit_parentcount(thing.commit)
         var
           unmatched = parents
         case parents:
         of 0:
           var tree: ptr git_tree
-          gitTrap tree, git_commit_tree(addr tree, commit).grc:
+          gitTrap tree, git_commit_tree(addr tree, thing.commit).grc:
             break master
 
           # these don't seem worth storing...
@@ -1479,15 +1547,17 @@ iterator commitsForSpec*(repo: GitRepository;
             continue
         else:
           for nth in 0 ..< parents:
-            gitTrap matchWithParent(commit, nth, options):
+            gitTrap matchWithParent(thing.commit, nth, options):
               continue
             unmatched.dec
 
         # all the parents matched
         if unmatched == 0:
-          yield commit
+          yield newResult(thing)
 
-iterator commitsForSpec*(path: string; spec: openArray[string]): GitCommit =
+iterator commitsForSpec*(path: string;
+                         spec: openArray[string]): GitResult[GitThing]
+  {.deprecated.} =
   ## yield each commit that matches the provided pathspec
   withGitRepoAt(path):
     for commit in commitsForSpec(repo, spec):
