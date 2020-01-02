@@ -994,20 +994,10 @@ proc getHeadOid*(repository: GitRepository): GitResult[GitOid] =
     else:
       result.err head.error
 
-proc getHeadOid*(path: string): GitResult[GitOid] =
-  ## try to retrieve the #head oid from a repository at the given path
-  demandGitRepoAt(path):
-    result = repo.getHeadOid
-
 proc repositoryState*(repository: GitRepository): GitRepoState =
   ## fetch the state of a repository
   withGit:
     result = cast[GitRepoState](git_repository_state(repository))
-
-proc repositoryState*(path: string): GitRepoState =
-  ## fetch the state of the repository at the given path
-  demandGitRepoAt(path):
-    result = repositoryState(repo)
 
 when hasWorkingStatus == true:
   iterator status*(repository: GitRepository; show: GitStatusShow;
