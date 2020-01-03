@@ -1202,7 +1202,7 @@ proc push*(walker: GitRevWalker; oid: GitOid): GitResultCode =
     result = git_revwalk_push(walker, oid).grc
 
 iterator revWalk*(repo: GitRepository; walker: GitRevWalker; start: GitOid):
-                  tuple[thing: GitThing; code: GitResultCode] =
+  GitResult[GitThing] =
   ## sic the walker on a repo starting with the given oid
   withGit:
     var
@@ -1211,13 +1211,17 @@ iterator revWalk*(repo: GitRepository; walker: GitRevWalker; start: GitOid):
     while true:
       let
         code = git_commit_lookup(addr commit, repo, addr oid).grc
-      if code == grcOk:
-        yield (thing: newThing(commit), code: code)
+      case code:
+      of grcOk:
+        yield newResult(newThing(commit))
+      of grcNotFound:
+        break
       else:
-        yield (thing: nil, code: code)
+        yield newResult[GitThing](code)
       let
         future = walker.next
       if future.isErr:
+        yield newResult[GitThing](future.error)
         break
       oid = future.get[]
 
@@ -1316,20 +1320,20 @@ iterator commitsForSpec*(repo: GitRepository;
         break
 
       # iterate over ALL the commits
-      for thing, code in repo.revWalk(walker, head.get):
+      for rev in repo.revWalk(walker, head.get):
         # if there's an error, yield it
-        if code != grcOk or thing.isNil:
-          yield newResult[GitThing](code)
+        if rev.isErr:
+          yield rev
           continue
 
         let
-          parents = git_commit_parentcount(thing.commit)
+          parents = git_commit_parentcount(rev.get.commit)
         var
           unmatched = parents
         case parents:
         of 0:
           var tree: ptr git_tree
-          gitTrap tree, git_commit_tree(addr tree, thing.commit).grc:
+          gitTrap tree, git_commit_tree(addr tree, rev.get.commit).grc:
             break master
 
           # these don't seem worth storing...
@@ -1340,13 +1344,13 @@ iterator commitsForSpec*(repo: GitRepository;
             continue
         else:
           for nth in 0 ..< parents:
-            gitTrap matchWithParent(thing.commit, nth, options):
+            gitTrap matchWithParent(rev.get.commit, nth, options):
               continue
             unmatched.dec
 
         # all the parents matched
         if unmatched == 0:
-          yield newResult(thing)
+          yield rev
 
 proc tagCreateLightweight*(repo: GitRepository; name: string; target: GitThing;
                            force = false): GitResult[GitOid] =

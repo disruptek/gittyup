@@ -60,3 +60,10 @@ suite "gittyup":
       checkpoint code.dumpError
       check false
     check grsNone == cloned.repositoryState
+
+  test "commits for spec":
+    let
+      dotnimble = "gittyup.nimble"
+    for thing in repo.commitsForSpec(@[dotnimble]):
+      check thing.isOk
+      free thing.get
