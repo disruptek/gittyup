@@ -475,24 +475,11 @@ template withGit(body: untyped) =
         raise newException(OSError, "unable to shut git")
   body
 
-template setResultAsError(code: typed) =
-  when declaredInScope(result):
-    when result is GitResultCode:
-      result = grc(code)
-    elif result of GitResult:
-      result.err grc(code)
-
-template withGitRepoAt(path: string; body: untyped) =
-  ## run the body, opening `repo` at the given `path`.
-  ## sets the proper return value in the event of error.
-  ## note that this introduces scope.
-  withGit:
-    block:
-      repository := openRepository(path):
-        setResultAsError(code)
-        break
-      var repo {.inject.} = repository
-      body
+template setResultAsError(result: typed; code: cint | GitResultCode) =
+  when result is GitResultCode:
+    result = grc(code)
+  elif result is GitResult:
+    result.err grc(code)
 
 template withResultOf(gitsaid: cint | GitResultCode; body: untyped) =
   ## when git said there was an error, set the result code;
@@ -500,18 +487,7 @@ template withResultOf(gitsaid: cint | GitResultCode; body: untyped) =
   if grc(gitsaid) == grcOk:
     body
   else:
-    setResultAsError(gitsaid)
-
-template demandGitRepoAt(path: string; body: untyped) =
-  withGit:
-    block:
-      repository := openRepository(path):
-        # quirky-esque exception purposes
-        setResultAsError(code)
-        let emsg = &"error opening {path}: {code}"
-        raise newException(IOError, emsg)
-      var repo {.inject.} = repository
-      body
+    setResultAsError(result, gitsaid)
 
 proc free*[T: GitHeapGits](point: ptr T) =
   withGit:
@@ -865,8 +841,7 @@ proc remoteRename*(repo: GitRepository; prior: string;
       if list.count == 0'u:
         result.ok newSeq[string]()
       else:
-        result.ok cstringArrayToSeq(cast[cstringArray](list.strings),
-                                    list.count)
+        result.ok cstringArrayToSeq(cast[cstringArray](list.strings), list.count)
 
 proc remoteDelete*(repo: GitRepository; name: string): GitResultCode =
   ## delete a remote from the repository
@@ -912,7 +887,9 @@ proc tagList*(repo: GitRepository): GitResult[seq[string]] =
     withResultOf git_tag_list(addr list, repo):
       defer:
         git_strarray_free(addr list)
-      if list.count > 0'u:
+      if list.count == 0'u:
+        result.ok newSeq[string]()
+      else:
         result.ok cstringArrayToSeq(cast[cstringArray](list.strings), list.count)
 
 proc lookupThing*(repo: GitRepository; name: string): GitResult[GitThing] =
@@ -973,6 +950,11 @@ proc tagTable*(repo: GitRepository): GitResult[GitTagTable] =
         continue
       # finally, add the thing's target to the table under the current name
       tags.add name, target.get
+
+    # don't forget to actually populate the result, i mean, who would be
+    # so stupid as to not actually return the result?  and then cut a new
+    # release?  like, a major release, even.  with no tests, or anything.
+    result.ok tags
 
 proc shortestTag*(table: GitTagTable; oid: string): string =
   ## pick the shortest tag that matches the oid supplied
@@ -1098,7 +1080,7 @@ proc checkoutTree*(repo: GitRepository; reference: string;
   withGit:
     block:
       thing := repo.lookupThing(reference):
-        setResultAsError(code)
+        setResultAsError(result, code)
         break
       result = repo.checkoutTree(thing, strategy = strategy)
 
