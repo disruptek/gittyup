@@ -64,6 +64,9 @@ suite "gittyup":
   test "commits for spec":
     let
       dotnimble = "gittyup.nimble"
-    for thing in repo.commitsForSpec(@[dotnimble]):
-      check thing.isOk
-      free thing.get
+    block found:
+      for thing in repo.commitsForSpec(@[dotnimble]):
+        check thing.isOk
+        free thing.get
+        break found
+      check false
