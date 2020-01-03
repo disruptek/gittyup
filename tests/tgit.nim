@@ -62,11 +62,18 @@ suite "gittyup":
     check grsNone == cloned.repositoryState
 
   test "commits for spec":
+    # clone ourselves into tmpdir
+    cloned := cloneme.clone(tmpdir):
+      checkpoint code.dumpError
+      check false
+    check grsNone == cloned.repositoryState
     let
-      dotnimble = "gittyup.nimble"
+      dotnimble = "gittyup.nim"
     block found:
-      for thing in repo.commitsForSpec(@[dotnimble]):
+      var
+        count = 0
+      for thing in cloned.commitsForSpec(@[dotnimble]):
         check thing.isOk
         free thing.get
-        break found
-      check false
+        count.inc
+      check count > 10

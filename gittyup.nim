@@ -551,6 +551,11 @@ proc free*(entries: GitTreeEntries) =
     for entry in entries.items:
       free(entry)
 
+proc copy*(oid: GitOid): GitOid =
+  ## create a copy of the oid; free it with dealloc
+  result = cast[GitOid](sizeof(git_oid).alloc)
+  git_oid_cpy(result, oid)
+
 proc short*(oid: GitOid; size: int): string =
   var
     output: cstring
@@ -794,7 +799,7 @@ proc setHeadDetached*(repo: GitRepository; oid: GitOid): GitResultCode =
 proc setHeadDetached*(repo: GitRepository; reference: string): GitResultCode =
   ## point the repo's head at the given reference
   var
-    oid: ptr git_oid = cast[ptr git_oid](sizeof(git_oid).alloc)
+    oid: GitOid = cast[GitOid](sizeof(git_oid).alloc)
   defer:
     dealloc oid
   withGit:
@@ -1019,7 +1024,7 @@ when hasWorkingStatus == true:
         # iterate over the status list by entry index
         for index in 0 ..< git_status_list_entrycount(statum):
           # and yield a status object result per each
-          yield newResult(git_status_byindex(statum, index.cuint))
+          yield newResult git_status_byindex(statum, index.cuint)
 
 else:
   iterator status*(repository: GitRepository; show: GitStatusShow;
@@ -1191,10 +1196,14 @@ proc newRevWalk*(repo: GitRepository): GitResult[GitRevWalker] =
 proc next*(walker: GitRevWalker): GitResult[GitOid] =
   ## walk to the next node
   withGit:
-    var
-      oid: git_oid
-    withResultOf git_revwalk_next(addr oid, walker):
-      result.ok addr oid
+    block:
+      var
+        oid: GitOid = cast[GitOid](sizeof(git_oid).alloc)
+      withResultOf git_revwalk_next(oid, walker):
+        result.ok oid
+        break
+      # free the oid if we couldn't use it
+      dealloc oid
 
 proc push*(walker: GitRevWalker; oid: GitOid): GitResultCode =
   ## add a tree to be walked
@@ -1206,24 +1215,28 @@ iterator revWalk*(repo: GitRepository; walker: GitRevWalker; start: GitOid):
   ## sic the walker on a repo starting with the given oid
   withGit:
     var
-      oid = start[]
+      oid = start
       commit: GitCommit
     while true:
       let
-        code = git_commit_lookup(addr commit, repo, addr oid).grc
+        code = git_commit_lookup(addr commit, repo, oid).grc
       case code:
       of grcOk:
-        yield newResult(newThing(commit))
+        yield newResult newThing(commit)
       of grcNotFound:
         break
       else:
         yield newResult[GitThing](code)
       let
         future = walker.next
-      if future.isErr:
-        yield newResult[GitThing](future.error)
+      if future.isOk:
+        dealloc oid
+        oid = future.get
+      else:
+        if future.error != grcIterOver:
+          yield newResult[GitThing](future.error)
         break
-      oid = future.get[]
+    dealloc oid
 
 proc newPathSpec*(spec: openArray[string]): GitResult[GitPathSpec] =
   ## instantiate a new path spec from a strarray
@@ -1320,7 +1333,8 @@ iterator commitsForSpec*(repo: GitRepository;
         break
 
       # iterate over ALL the commits
-      for rev in repo.revWalk(walker, head.get):
+      # pass a copy of the head oid so revwalk can free it
+      for rev in repo.revWalk(walker, head.get.copy):
         # if there's an error, yield it
         if rev.isErr:
           yield rev
@@ -1438,7 +1452,7 @@ iterator branches*(repo: GitRepository;
           defer:
             branch.free
           # issue a branch result (and free it later)
-          yield newResult(branch)
+          yield newResult branch
         of grcIterOver:
           # or end iteration normally
           break iteration
