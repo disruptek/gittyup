@@ -7,6 +7,7 @@ import gittyup
 
 const
   v1 = "555d5d803f1c63f3fad296ba844cd6f718861d0e"
+  v102 = "372deb094fb11e56171e5c9785bd316577724f2e"
   cloneme = parseURI"https://github.com/disruptek/gittyup"
 
 suite "gittyup":
@@ -71,9 +72,14 @@ suite "gittyup":
       dotnimble = "gittyup.nim"
     block found:
       var
-        count = 0
+        things: seq[GitThing] = @[]
       for thing in cloned.commitsForSpec(@[dotnimble]):
         check thing.isOk
-        free thing.get
-        count.inc
-      check count > 10
+        things.add thing.get
+      check things.len > 10
+      block found:
+        for thing in things.items:
+          if $thing.oid == v102:
+            break found
+          free thing
+        check false
