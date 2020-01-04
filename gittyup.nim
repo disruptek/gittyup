@@ -1,3 +1,4 @@
+import std/times
 import std/logging
 import std/sets
 import std/options
@@ -57,7 +58,7 @@ type
                 git_strarray | git_object | git_commit | git_status_list |
                 git_annotated_commit | git_tree_entry | git_revwalk | git_buf |
                 git_pathspec | git_tree | git_diff | git_pathspec_match_list |
-                git_branch_iterator
+                git_branch_iterator | git_signature
 
   # or stuff we alloc and pass to libgit2, and then free later ourselves
   NimHeapGits = git_clone_options | git_status_options | git_checkout_options |
@@ -336,14 +337,15 @@ type
   GitStatus* = ptr git_status_entry
   GitStatusList* = ptr git_status_list
   GitTree* = ptr git_tree
+  GitSignature* = ptr git_signature
 
-  GitClone* = object
+  GitClone* {.deprecated.} = object
     url*: cstring
     directory*: cstring
     repo*: GitRepository
     options*: ptr git_clone_options
 
-  GitOpen* = object
+  GitOpen* {.deprecated.} = object
     path*: cstring
     repo*: GitRepository
 
@@ -533,12 +535,12 @@ proc free*[T: NimHeapGits](point: ptr T) =
   if point != nil:
     dealloc(point)
 
-proc free*(clone: GitClone) =
+proc free*(clone: GitClone) {.deprecated.} =
   withGit:
     free(clone.repo)
     free(clone.options)
 
-proc free*(opened: GitOpen) =
+proc free*(opened: GitOpen) {.deprecated.} =
   withGit:
     free(opened.repo)
 
@@ -576,6 +578,9 @@ func name*(entry: GitTreeEntry): string =
 
 func name*(remote: GitRemote): string =
   result = $git_remote_name(remote)
+
+func `$`*(tags: GitTagTable): string =
+  result = "{poorly-rendered tagtable}"
 
 func `$`*(ps: GitPathSpec): string =
   result = "{poorly-rendered pathspec}"
@@ -636,25 +641,31 @@ proc branchName*(got: GitReference): string =
       result = $name
 
 func isTag*(got: GitReference): bool =
+  assert got != nil
   result = git_reference_is_tag(got) == 1
 
 proc isBranch*(got: GitReference): bool =
+  assert got != nil
   withGit:
     result = git_reference_is_branch(got) == 1
 
 func name*(got: GitReference): string =
+  assert got != nil
   result = $git_reference_name(got)
 
 proc owner*(thing: GitThing): GitRepository =
   ## retrieve the repository that owns this thing
+  assert thing.o != nil
   result = git_object_owner(thing.o)
 
 proc owner*(commit: GitCommit): GitRepository =
   ## retrieve the repository that owns this commit
+  assert commit != nil
   result = git_commit_owner(commit)
 
 proc owner*(reference: GitReference): GitRepository =
   ## retrieve the repository that owns this reference
+  assert reference != nil
   result = git_reference_owner(reference)
 
 proc flags*(status: GitStatus): set[GitStatusFlag] =
@@ -724,7 +735,7 @@ proc summary*(thing: GitThing): string =
 func `$`*(commit: GitCommit): string =
   result = $cast[GitObject](commit)
 
-proc free*(table: var GitTagTable) =
+proc free*(table: GitTagTable) =
   ## free a tag table
   withGit:
     for tag, obj in table.pairs:
@@ -767,9 +778,23 @@ proc commit*(thing: GitThing): GitCommit =
   ## turn a thing into its commit
   assert thing.kind == goCommit
   result = cast[GitCommit](thing.o)
+  assert result != nil
+
+proc committer*(thing: GitThing): GitSignature =
+  ## get the committer of a thing that's a commit
+  assert thing.kind == goCommit
+  result = git_commit_committer(cast[GitCommit](thing.o))
+  assert result != nil
+
+proc author*(thing: GitThing): GitSignature =
+  ## get the author of a thing that's a commit
+  assert thing.kind == goCommit
+  result = git_commit_author(cast[GitCommit](thing.o))
+  assert result != nil
 
 proc newThing(obj: GitObject | GitCommit | GitTag): GitThing =
   ## wrap a git object as a thing
+  assert obj != nil
   try:
     result = GitThing(kind: cast[GitObject](obj).kind,
                       o: cast[GitObject](obj))
@@ -902,12 +927,8 @@ proc lookupThing*(repo: GitRepository; name: string): GitResult[GitThing] =
   withGit:
     var
       obj: GitObject
-    let
-      code = git_revparse_single(addr obj, repo, name).grc
-    if code == grcOk:
+    withResultOf git_revparse_single(addr obj, repo, name):
       result.ok newThing(obj)
-    else:
-      result.err code
 
 proc newTagTable*(size = 32): GitTagTable =
   ## instantiate a new table
@@ -1366,9 +1387,11 @@ iterator commitsForSpec*(repo: GitRepository;
         if unmatched == 0:
           yield rev
 
-proc tagCreateLightweight*(repo: GitRepository; name: string; target: GitThing;
-                           force = false): GitResult[GitOid] =
+proc tagCreateLightweight*(repo: GitRepository; target: GitThing;
+                           name: string; force = false): GitResult[GitOid] =
   ## create a new lightweight tag in the repository
+  assert repo != nil
+  assert target != nil and target.o != nil
   withGit:
     block:
       let
@@ -1380,6 +1403,16 @@ proc tagCreateLightweight*(repo: GitRepository; name: string; target: GitThing;
         break
       # free the oid if we didn't end up using it
       dealloc oid
+
+proc tagCreateLightweight*(repo: GitRepository; name: string; target: GitThing;
+                           force = false): GitResult[GitOid] {.deprecated.} =
+  ## create a new lightweight tag in the repository
+  result = tagCreateLightweight(repo, target, name, force = force)
+
+proc tagCreateLightweight*(target: GitThing; name: string;
+                           force = false): GitResult[GitOid] =
+  ## create a new lightweight tag in the repository
+  result = tagCreateLightweight(target.owner, target, name, force = force)
 
 proc branchUpstream*(branch: GitReference): GitResult[GitReference] =
   ## retrieve remote tracking reference for a branch reference
@@ -1469,3 +1502,75 @@ proc hasThing*(tags: GitTagTable; thing: GitThing): bool =
     result = commit.oid == thing.oid
     if result:
       break
+
+proc newSignature*(name, email: string; time: Time): GitResult[GitSignature] =
+  ## create a new signature using arguments; must be freed
+  ## (this does not yet support the offset-in-minutes specification)
+  withGit:
+    var
+      signature: GitSignature
+    withResultOf git_signature_new(addr signature, name, email,
+                                   time.toUnix.git_time_t, 0.cint):
+      result.ok signature
+
+proc defaultSignature*(repo: GitRepository): GitResult[GitSignature] =
+  ## create a new signature using git configuration; must be freed
+  withGit:
+    var
+      signature: GitSignature
+    withResultOf git_signature_default(addr signature, repo):
+      result.ok signature
+
+proc defaultSignature*(repo: GitRepository; time: Time): GitResult[GitSignature] =
+  ## create a new signature using git configuration; must be freed
+  result = repo.defaultSignature
+  if result.isOk:
+    var
+      sig = result.get
+    result = newSignature($sig.name, $sig.email, time)
+
+proc tagCreate*(repo: GitRepository; target: GitThing; name: string;
+                tagger: GitSignature;
+                message = ""; force = false): GitResult[GitOid] =
+  ## create a new tag in the repository with signature, message
+  assert repo != nil
+  assert target != nil and target.o != nil
+  assert tagger != nil
+  withGit:
+    block:
+      let
+        forced: cint = if force: 1 else: 0
+      var
+        oid: GitOid = cast[GitOid](sizeof(git_oid).alloc)
+      withResultOf git_tag_create(oid, repo, name, target.o,
+                                  tagger, message, forced):
+        assert git_oid_is_zero(oid) == 0
+        result.ok oid
+        break
+      # free the oid if we didn't end up using it
+      dealloc oid
+
+proc tagCreate*(repo: GitRepository; target: GitThing; name: string;
+                message = ""; force = false): GitResult[GitOid] =
+  ## lightweight routine to create a heavyweight signed and dated tag
+  withGit:
+    let
+      tagger = target.committer  # the committer, as opposed to the author
+    result = repo.tagCreate(target, name, tagger,
+                            message = message, force = force)
+
+proc tagCreate*(target: GitThing; name: string;
+                message = ""; force = false): GitResult[GitOid] =
+  ## lightweight routine to create a heavyweight signed and dated tag
+  withGit:
+    let
+      repo = target.owner        # ie. the repository that owns the target
+      tagger = target.committer  # the committer, as opposed to the author
+    result = repo.tagCreate(target, name, tagger,
+                            message = message, force = force)
+
+proc tagDelete*(repo: GitRepository; name: string): GitResultCode =
+  ## remove a tag
+  assert repo != nil
+  withGit:
+    result = git_tag_delete(repo, name).grc

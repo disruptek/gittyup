@@ -1,3 +1,4 @@
+import std/tables
 import std/uri
 import std/strutils
 import std/os
@@ -83,3 +84,21 @@ suite "gittyup":
             break found
           free thing
         check false
+
+    test "create and delete a tag":
+      tags := repo.tagTable:
+        checkpoint code.dumpError
+        check false
+      if "test" in tags:
+        check repo.tagDelete("test") == grcOk
+      thing := repo.lookupThing "HEAD":
+        checkpoint code.dumpError
+        check false
+      let
+        oid = thing.tagCreate "test"
+      if oid.isErr:
+        checkpoint oid.error.dumpError
+        check false
+      else:
+        check repo.tagDelete("test") == grcOk
+        dealloc oid.get
