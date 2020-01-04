@@ -751,7 +751,9 @@ proc free*(table: GitTagTable) =
         # make sure we don't free the same object twice
         if not same:
           obj.free
-    table.clear
+    # working around nim-1.0 vs. nim-1.1
+    var t = table
+    t.clear
 
 proc hash*(oid: GitOid): Hash =
   var h: Hash = 0
