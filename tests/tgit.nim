@@ -11,20 +11,27 @@ const
   v102 = "372deb094fb11e56171e5c9785bd316577724f2e"
   cloneme = parseURI"https://github.com/disruptek/gittyup"
 
+template cleanup(directory: string) =
+  try:
+    removeDir(directory)
+    check not existsOrCreateDir(directory)
+  except OSError as e:
+    echo "error removing ", directory
+    echo "exception: ", e.msg
+
 suite "gittyup":
   setup:
     check init()
     let
       tmpdir = getTempDir() / "gittyup-" & $getCurrentProcessId() / ""
-    removeDir(tmpdir)
-    check not tmpdir.existsOrCreateDir
+    tmpdir.cleanup
     repo := openRepository(getCurrentDir()):
       checkpoint code.dumpError
       check false
 
   teardown:
     check shutdown()
-    removeDir(tmpdir)
+    tmpdir.cleanup
 
   test "zero errors":
     when defined(posix):
