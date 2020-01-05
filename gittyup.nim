@@ -339,16 +339,6 @@ type
   GitTree* = ptr git_tree
   GitSignature* = ptr git_signature
 
-  GitClone* {.deprecated.} = object
-    url*: cstring
-    directory*: cstring
-    repo*: GitRepository
-    options*: ptr git_clone_options
-
-  GitOpen* {.deprecated.} = object
-    path*: cstring
-    repo*: GitRepository
-
   GitTagTable* = OrderedTableRef[string, GitThing]
   GitResult*[T] = Result[T, GitResultCode]
 
@@ -456,25 +446,27 @@ proc normalizeUrl(uri: Uri): Uri =
     result.scheme = "ssh"
 
 proc init*(): bool =
-  let count = git_libgit2_init()
-  result = count > 0
-  when defined(debugGit):
-    debug "open gits:", count
+  when defined(gitShutsDown):
+    result = git_libgit2_init() > 0
+  else:
+    block:
+      once:
+        result = git_libgit2_init() > 0
+        break
+      result = true
 
 proc shutdown*(): bool =
-  let count = git_libgit2_shutdown()
-  result = count >= 0
-  when defined(debugGit):
-    debug "open gits:", count
+  when defined(gitShutsDown):
+    result = git_libgit2_shutdown() >= 0
+  else:
+    result = true
 
 template withGit(body: untyped) =
-  once:
-    if not init():
-      raise newException(OSError, "unable to init git")
-  when defined(gitShutsDown):
-    defer:
-      if not shutdown():
-        raise newException(OSError, "unable to shut git")
+  if not init():
+    raise newException(OSError, "unable to init git")
+  defer:
+    if not shutdown():
+      raise newException(OSError, "unable to shut git")
   body
 
 template setResultAsError(result: typed; code: cint | GitResultCode) =
@@ -535,18 +527,17 @@ proc free*[T: NimHeapGits](point: ptr T) =
   if point != nil:
     dealloc(point)
 
-proc free*(clone: GitClone) {.deprecated.} =
-  withGit:
-    free(clone.repo)
-    free(clone.options)
-
-proc free*(opened: GitOpen) {.deprecated.} =
-  withGit:
-    free(opened.repo)
-
 proc free*(thing: GitThing) =
   withGit:
-    free(thing.o)
+    case thing.kind:
+    of goCommit:
+      free(cast[GitCommit](thing.o))
+    of goTree:
+      free(cast[GitTree](thing.o))
+    of goTag:
+      free(cast[GitTag](thing.o))
+    else:
+      raise newException(Defect, "don't know how to free " & $thing.kind)
 
 proc free*(entries: GitTreeEntries) =
   withGit:
@@ -1240,25 +1231,39 @@ iterator revWalk*(repo: GitRepository; walker: GitRevWalker; start: GitOid):
     var
       oid = start
       commit: GitCommit
+
     while true:
+      # lookup the next commit using the current oid
       let
         code = git_commit_lookup(addr commit, repo, oid).grc
       case code:
       of grcOk:
+        # a successful lookup; yield a new thing using the commit
         yield newResult newThing(commit)
       of grcNotFound:
+        # not found; we're done the walk
         break
       else:
+        # undefined error; emit it as such
         yield newResult[GitThing](code)
+
+      # now we need to fetch the next oid in the walk
       let
         future = walker.next
       if future.isOk:
+        # the future oid was retrieved successfully, so
+        # we free the previous oid and assign the new one
         dealloc oid
         oid = future.get
       else:
+        # if we didn't reach the end of iteration,
         if future.error != grcIterOver:
+          # emit the error
           yield newResult[GitThing](future.error)
+        # and then end our walk
         break
+
+    # free whatever oid we still have
     dealloc oid
 
 proc newPathSpec*(spec: openArray[string]): GitResult[GitPathSpec] =
@@ -1311,6 +1316,63 @@ proc matchWithParent(commit: GitCommit; nth: cuint;
     if git_diff_num_deltas(diff).uint == 0'u:
       result = grcNotFound
 
+proc allParentsMatch(commit: GitCommit; options: ptr git_diff_options;
+                     parents: cuint): GitResult[bool] =
+  # count matching parents
+  block complete:
+    for nth in 0 ..< parents:
+      let
+        code = matchWithParent(commit, nth.cuint, options)
+      case code:
+      of grcOk:
+        # this feels like a match; keep going
+        continue
+      of grcNotFound:
+        # this is fine, but it's not a match
+        result.ok false
+      else:
+        # this is probably not that fine; error on it
+        result.err code
+      break complete
+    # everything matched
+    result.ok true
+
+proc zeroParentsMatch(commit: GitCommit; ps: GitPathSpec): GitResult[bool] =
+  ## true if this commit's tree matches the pathspec
+  var
+    tree: ptr git_tree
+  # try to grab the commit's tree
+  withResultOf git_commit_tree(addr tree, commit):
+    # remember to free the tree later
+    defer:
+      free tree
+
+    # these don't seem worth storing...
+    #var matches: ptr git_pathspec_match_list
+    let
+      gps: uint32 = {gpsNoMatchError}.setFlags
+      # match the pathspec against the tree
+      code = git_pathspec_match_tree(nil, tree, gps, ps).grc
+    case code:
+    of grcOk:
+      # this feels like a match
+      result.ok true
+    of grcNotFound:
+      # this is fine, but it's not a match
+      result.ok false
+    else:
+      # this is probably not that fine; error on it
+      result.err code
+
+proc parentsMatch(commit: GitCommit; options: ptr git_diff_options;
+                  ps: GitPathSpec): GitResult[bool] =
+    let
+      parents: cuint = git_commit_parentcount(commit)
+    if parents == 0.cuint:
+      result = commit.zeroParentsMatch(ps)
+    else:
+      result = commit.allParentsMatch(options, parents)
+
 iterator commitsForSpec*(repo: GitRepository;
                          spec: openArray[string]): GitResult[GitThing] =
   ## yield each commit that matches the provided pathspec
@@ -1320,74 +1382,54 @@ iterator commitsForSpec*(repo: GitRepository;
     defer:
       dealloc options
 
-    block master:
-      var
-        code: GitResultCode
-
-      # options for matching against n parent trees
+    let
       code = git_diff_options_init(options, GIT_DIFF_OPTIONS_VERSION).grc
-      if code != grcOk:
-        # if there's an error, emit it and bail
-        yield newResult[GitThing](code)
-        break
+    if code != grcOk:
+      yield newResult[GitThing](code)
+    else:
       options.pathspec.count = len(spec).cuint
       options.pathspec.strings = cast[ptr cstring](allocCStringArray(spec))
+
+      # we'll free the strings array later
       defer:
         deallocCStringArray(cast[cstringArray](options.pathspec.strings))
 
-      # setup a similar pathspec for matching against trees, and free it later
-      ps := newPathSpec(spec):
-        yield newResult[GitThing](code)
-        break
+      block master:
+        # setup a similar pathspec for matching against trees, and free it later
+        ps := newPathSpec(spec):
+          yield newResult[GitThing](code)
+          break
 
-      # we'll need a walker, and we'll want it freed
-      walker := repo.newRevWalk:
-        yield newResult[GitThing](code)
-        break
+        # we'll need a walker, and we'll want it freed
+        walker := repo.newRevWalk:
+          yield newResult[GitThing](code)
+          break
 
-      # find the head
-      let head = repo.getHeadOid
-      if head.isErr:
-        # no head, no problem
-        break
+        # find the head
+        let head = repo.getHeadOid
+        if head.isErr:
+          # no head, no problem
+          break
 
-      # start at the head
-      gitTrap walker.push(head.get):
-        break
+        # start at the head
+        gitTrap walker.push(head.get):
+          break
 
-      # iterate over ALL the commits
-      # pass a copy of the head oid so revwalk can free it
-      for rev in repo.revWalk(walker, head.get.copy):
-        # if there's an error, yield it
-        if rev.isErr:
-          yield rev
-          continue
-
-        let
-          parents = git_commit_parentcount(rev.get.commit)
-        var
-          unmatched = parents
-        case parents:
-        of 0:
-          var tree: ptr git_tree
-          gitTrap tree, git_commit_tree(addr tree, rev.get.commit).grc:
-            break master
-
-          # these don't seem worth storing...
-          #var matches: ptr git_pathspec_match_list
-          let gps: uint32 = {gpsNoMatchError}.setFlags
-          gitFail git_pathspec_match_tree(nil, tree, gps, ps).grc:
-            # ie. continue the revwalk
-            continue
-        else:
-          for nth in 0 ..< parents:
-            gitTrap matchWithParent(rev.get.commit, nth, options):
-              continue
-            unmatched.dec
-
-        # all the parents matched
-        if unmatched == 0:
-          yield rev
+        # iterate over ALL the commits
+        # pass a copy of the head oid so revwalk can free it
+        for rev in repo.revWalk(walker, head.get.copy):
+          # if there's an error, yield it
+          if rev.isErr:
+            yield rev
+          else:
+            let
+              matched = rev.get.commit.parentsMatch(options, ps)
+            if matched.isErr:
+              # the matching process produced an error
+              yield newResult[GitThing](matched.error)
+            elif matched.get:
+              # all the parents matched
+              yield rev
 
 proc tagCreateLightweight*(repo: GitRepository; target: GitThing;
                            name: string; force = false): GitResult[GitOid] =
