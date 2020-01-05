@@ -769,19 +769,19 @@ proc kind(obj: GitObject): GitObjectKind =
 
 proc commit*(thing: GitThing): GitCommit =
   ## turn a thing into its commit
-  assert thing.kind == goCommit
+  assert thing != nil and thing.kind == goCommit
   result = cast[GitCommit](thing.o)
   assert result != nil
 
 proc committer*(thing: GitThing): GitSignature =
   ## get the committer of a thing that's a commit
-  assert thing.kind == goCommit
+  assert thing != nil and thing.kind == goCommit
   result = git_commit_committer(cast[GitCommit](thing.o))
   assert result != nil
 
 proc author*(thing: GitThing): GitSignature =
   ## get the author of a thing that's a commit
-  assert thing.kind == goCommit
+  assert thing != nil and thing.kind == goCommit
   result = git_commit_author(cast[GitCommit](thing.o))
   assert result != nil
 
@@ -985,15 +985,16 @@ proc shortestTag*(table: GitTagTable; oid: string): string =
   if result == "":
     result = oid
 
-proc getHeadOid*(repository: GitRepository): GitResult[GitOid] =
+proc getHeadOid*(repo: GitRepository): GitResult[GitOid] =
   ## try to retrieve the #head oid from a repository
   withGit:
-    let
-      head = repository.headReference
-    if head.isOk:
-      result.ok head.get.oid
-    else:
-      result.err head.error
+    block:
+      # free the head after we're done with it
+      head := repo.headReference:
+        result.err code
+        break
+      # return a copy of the oid so we can free the head
+      result.ok head.oid.copy
 
 proc repositoryState*(repository: GitRepository): GitRepoState =
   ## fetch the state of a repository
@@ -1406,18 +1407,17 @@ iterator commitsForSpec*(repo: GitRepository;
           break
 
         # find the head
-        let head = repo.getHeadOid
-        if head.isErr:
+        head := repo.getHeadOid:
           # no head, no problem
           break
 
         # start at the head
-        gitTrap walker.push(head.get):
+        gitTrap walker.push(head):
           break
 
         # iterate over ALL the commits
         # pass a copy of the head oid so revwalk can free it
-        for rev in repo.revWalk(walker, head.get.copy):
+        for rev in repo.revWalk(walker, head.copy):
           # if there's an error, yield it
           if rev.isErr:
             yield rev
