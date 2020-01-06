@@ -26,8 +26,8 @@ else:
   {.fatal: "libgit2 version `" & git2SetVer & "` unsupported".}
 
 import nimgit2
-import result except ok, err
-export result except ok, err
+import result as results
+export results
 
 # there are some name changes between the 0.28 and later versions
 when compiles(git_clone_init_options):
@@ -413,14 +413,17 @@ template gitTrap*(code: GitResultCode; body: untyped) =
     dumpError()
     body
 
-template ok*(self: var GitResult; x: auto) = result.ok(self.Result, x)
-template err*(self: var GitResult; x: auto) = result.err(self.Result, x)
-template ok*[T](v: T): auto = typeof(result).ok(v)
-template err*[T](v: T): auto = typeof(result).err(v)
-template newResult[T](code: GitResultCode): GitResult[T] =
-  (var result = GitResult[T](); result.err code; result)
-template newResult[T](value: T): GitResult[T] =
-  (var result = GitResult[T](); result.ok value; result)
+# set a result variable `self` to value/error
+template ok*[T](self: var GitResult[T]; x: T): auto =
+  results.ok(self.Result, x)
+template err*[T](self: var GitResult[T]; x: GitResultCode): auto =
+  results.err(self.Result, x)
+
+# create a new result (eg. for an iterator)
+template ok*[T](x: T): auto =
+  results.ok(Result[T, GitResultCode], x)
+template err*[T](x: GitResultCode): auto =
+  results.err(Result[T, GitResultCode], x)
 
 template `:=`*[T](v: untyped{nkIdent}; vv: Result[T, GitResultCode];
                   body: untyped): untyped =
@@ -1016,7 +1019,7 @@ when hasWorkingStatus == true:
           code = git_status_options_init(options, GIT_STATUS_OPTIONS_VERSION).grc
         if code != grcOk:
           # throw the error code
-          yield newResult[GitStatus](code)
+          yield err[GitStatus](code)
           break
 
         # add the options specified by the user
@@ -1030,7 +1033,7 @@ when hasWorkingStatus == true:
         code = git_status_list_new(addr statum, repository, options).grc
         if code != grcOk:
           # throw the error code
-          yield newResult[GitStatus](code)
+          yield err[GitStatus](code)
           break
         # remember to free it
         defer:
@@ -1039,7 +1042,7 @@ when hasWorkingStatus == true:
         # iterate over the status list by entry index
         for index in 0 ..< git_status_list_entrycount(statum):
           # and yield a status object result per each
-          yield newResult git_status_byindex(statum, index.cuint)
+          yield ok[GitStatus](git_status_byindex(statum, index.cuint))
 
 else:
   iterator status*(repository: GitRepository; show: GitStatusShow;
@@ -1225,28 +1228,29 @@ proc push*(walker: GitRevWalker; oid: GitOid): GitResultCode =
   withGit:
     result = git_revwalk_push(walker, oid).grc
 
-iterator revWalk*(repo: GitRepository; walker: GitRevWalker; start: GitOid):
-  GitResult[GitThing] =
+iterator revWalk*(repo: GitRepository; walker: GitRevWalker;
+                  start: GitOid): GitResult[GitThing] =
   ## sic the walker on a repo starting with the given oid
   withGit:
     var
       oid = start
-      commit: GitCommit
 
     while true:
+      var
+        commit: GitCommit
       # lookup the next commit using the current oid
       let
         code = git_commit_lookup(addr commit, repo, oid).grc
       case code:
       of grcOk:
         # a successful lookup; yield a new thing using the commit
-        yield newResult newThing(commit)
+        yield ok[GitThing](newThing(commit))
       of grcNotFound:
         # not found; we're done the walk
         break
       else:
         # undefined error; emit it as such
-        yield newResult[GitThing](code)
+        yield err[GitThing](code)
 
       # now we need to fetch the next oid in the walk
       let
@@ -1260,7 +1264,7 @@ iterator revWalk*(repo: GitRepository; walker: GitRevWalker; start: GitOid):
         # if we didn't reach the end of iteration,
         if future.error != grcIterOver:
           # emit the error
-          yield newResult[GitThing](future.error)
+          yield err[GitThing](future.error)
         # and then end our walk
         break
 
@@ -1386,7 +1390,7 @@ iterator commitsForSpec*(repo: GitRepository;
     let
       code = git_diff_options_init(options, GIT_DIFF_OPTIONS_VERSION).grc
     if code != grcOk:
-      yield newResult[GitThing](code)
+      yield err[GitThing](code)
     else:
       options.pathspec.count = len(spec).cuint
       options.pathspec.strings = cast[ptr cstring](allocCStringArray(spec))
@@ -1398,12 +1402,12 @@ iterator commitsForSpec*(repo: GitRepository;
       block master:
         # setup a similar pathspec for matching against trees, and free it later
         ps := newPathSpec(spec):
-          yield newResult[GitThing](code)
+          yield err[GitThing](code)
           break
 
         # we'll need a walker, and we'll want it freed
         walker := repo.newRevWalk:
-          yield newResult[GitThing](code)
+          yield err[GitThing](code)
           break
 
         # find the head
@@ -1426,7 +1430,7 @@ iterator commitsForSpec*(repo: GitRepository;
               matched = rev.get.commit.parentsMatch(options, ps)
             if matched.isErr:
               # the matching process produced an error
-              yield newResult[GitThing](matched.error)
+              yield err[GitThing](matched.error)
             elif matched.get:
               # all the parents matched
               yield rev
@@ -1513,7 +1517,7 @@ iterator branches*(repo: GitRepository;
       # if we couldn't create the iterator,
       if code != grcOk:
         # then emit the error and bail
-        yield newResult[GitReference](code)
+        yield err[GitReference](code)
         break iteration
       defer:
         iter.free
@@ -1529,13 +1533,13 @@ iterator branches*(repo: GitRepository;
           defer:
             branch.free
           # issue a branch result (and free it later)
-          yield newResult branch
+          yield ok(branch)
         of grcIterOver:
           # or end iteration normally
           break iteration
         else:
           # or end iteration with an error emission
-          yield newResult[GitReference](code)
+          yield err[GitReference](code)
           break iteration
     # now, look, i tol' you it was gonna get weird; it's
     # your own fault you weren't paying attention
