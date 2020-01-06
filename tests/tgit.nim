@@ -70,6 +70,24 @@ suite "gittyup":
       check false
     check grsNone == cloned.repositoryState
 
+  test "create and delete a tag":
+    tags := repo.tagTable:
+      checkpoint code.dumpError
+      check false
+    if "test" in tags:
+      check repo.tagDelete("test") == grcOk
+    thing := repo.lookupThing "HEAD":
+      checkpoint code.dumpError
+      check false
+    let
+      oid = thing.tagCreate "test"
+    if oid.isErr:
+      checkpoint oid.error.dumpError
+      check false
+    else:
+      check repo.tagDelete("test") == grcOk
+      dealloc oid.get
+
   test "commits for spec":
     # clone ourselves into tmpdir
     cloned := cloneme.clone(tmpdir):
@@ -82,8 +100,14 @@ suite "gittyup":
       var
         things: seq[GitThing] = @[]
       for thing in cloned.commitsForSpec(@[dotnimble]):
+        echo "thing arrived"
         check thing.isOk
-        things.add thing.get
+        if thing.isOk:
+          echo "thing is ok"
+          echo thing.get
+          echo "adding..."
+          things.add thing.get
+          echo "added"
       check things.len > 10
       block found:
         for thing in things.items:
@@ -91,21 +115,3 @@ suite "gittyup":
             break found
           free thing
         check false
-
-    test "create and delete a tag":
-      tags := repo.tagTable:
-        checkpoint code.dumpError
-        check false
-      if "test" in tags:
-        check repo.tagDelete("test") == grcOk
-      thing := repo.lookupThing "HEAD":
-        checkpoint code.dumpError
-        check false
-      let
-        oid = thing.tagCreate "test"
-      if oid.isErr:
-        checkpoint oid.error.dumpError
-        check false
-      else:
-        check repo.tagDelete("test") == grcOk
-        dealloc oid.get

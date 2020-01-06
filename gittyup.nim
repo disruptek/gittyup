@@ -298,7 +298,8 @@ type
   GitObjectKind* = enum
     # we have to add 2 here to satisfy nim; discriminants.low must be zero
     goAny         = (2 + GIT_OBJECT_ANY, "object")
-    goBad         = (2 + GIT_OBJECT_INVALID, "invalid")
+    goInvalid     = (2 + GIT_OBJECT_INVALID, "invalid")
+    # this space intentionally left blank
     goCommit      = (2 + GIT_OBJECT_COMMIT, "commit")
     goTree        = (2 + GIT_OBJECT_TREE, "tree")
     goBlob        = (2 + GIT_OBJECT_BLOB, "blob")
@@ -530,7 +531,7 @@ proc free*[T: NimHeapGits](point: ptr T) =
   if point != nil:
     dealloc(point)
 
-proc free*(thing: GitThing) =
+proc free*(thing: sink GitThing) =
   withGit:
     case thing.kind:
     of goCommit:
@@ -539,13 +540,20 @@ proc free*(thing: GitThing) =
       free(cast[GitTree](thing.o))
     of goTag:
       free(cast[GitTag](thing.o))
-    else:
-      raise newException(Defect, "don't know how to free " & $thing.kind)
+    of {goAny, goInvalid, goBlob, goOfsDelta, goRefDelta}:
+      free(cast[GitObject](thing.o))
 
-proc free*(entries: GitTreeEntries) =
+proc free*(entries: sink GitTreeEntries) =
   withGit:
     for entry in entries.items:
       free(entry)
+
+proc copy*(commit: GitCommit): GitResult[GitCommit] =
+  ## create a copy of the commit; free it with free
+  var
+    dupe: GitCommit
+  withResultOf git_commit_dup(addr dupe, commit):
+    result.ok dupe
 
 proc copy*(oid: GitOid): GitOid =
   ## create a copy of the oid; free it with dealloc
@@ -681,9 +689,20 @@ func `$`*(reference: GitReference): string =
 func `$`*(entry: GitTreeEntry): string =
   result = entry.name
 
+func kind(obj: GitObject): GitObjectKind =
+  let
+    kind = git_object_type(obj)
+  result = (kind + GitObjectKind.high.ord - GIT_OBJECT_REF_DELTA).GitObjectKind
+
 func `$`*(obj: GitObject): string =
-  result = $(git_object_type(obj).git_object_type2string)
-  result &= "-" & $obj.git_object_id
+  ## string representation of git object
+  let
+    kind = obj.kind
+  case kind:
+  of goInvalid:
+    result = "{invalid}"
+  else:
+    result = $kind & "-" & $obj.git_object_id
 
 func `$`*(thing: GitThing): string =
   result = $thing.o
@@ -729,7 +748,7 @@ proc summary*(thing: GitThing): string =
 func `$`*(commit: GitCommit): string =
   result = $cast[GitObject](commit)
 
-proc free*(table: GitTagTable) =
+proc free*(table: sink GitTagTable) =
   ## free a tag table
   withGit:
     for tag, obj in table.pairs:
@@ -763,12 +782,6 @@ proc hash*(thing: GitThing): Hash =
   var h: Hash = 0
   h = h !& hash($thing.oid)
   result = !$h
-
-proc kind(obj: GitObject): GitObjectKind =
-  withGit:
-    let
-      typeName = $(git_object_type(obj).git_object_type2string)
-    result = parseEnum[GitObjectKind](typeName)
 
 proc commit*(thing: GitThing): GitCommit =
   ## turn a thing into its commit
@@ -930,6 +943,28 @@ proc newTagTable*(size = 32): GitTagTable =
   ## instantiate a new table
   result = newOrderedTable[string, GitThing](size)
 
+proc addTag(tags: var GitTagTable; name: string;
+            thing: sink GitThing): GitResultCode =
+  ## add a thing to the tag table, perhaps peeling it first
+  # if it's not a tag, just add it to the table and move on
+  if thing.kind != goTag:
+    # no need to peel this thing
+    tags.add name, thing
+    result = grcOk
+  else:
+    # it's a tag, so attempt to dereference it
+    let
+      target = thing.target
+    if target.isErr:
+      # my worst fears are realized
+      result = target.error
+    else:
+      # add the thing's target to the table under the current name
+      tags.add name, target.get
+      result = grcOk
+    # free the thing; we don't need it anymore
+    free thing
+
 proc tagTable*(repo: GitRepository): GitResult[GitTagTable] =
   ## compose a table of tags and their associated references
   block:
@@ -951,27 +986,12 @@ proc tagTable*(repo: GitRepository): GitResult[GitTagTable] =
         thing = repo.lookupThing(name)
       if thing.isErr:
         # if that failed, just continue to the next name versus error'ing
-        debug &"failed lookup for `{name}`: " & $thing.error
-        continue
-
-      # if successful, and it's not a tag, just add it to the table and move on
-      if thing.get.kind != goTag:
-        tags.add name, thing.get
-        continue
-
-      # at this point, we know we'll be freeing thing
-      defer:
-        free thing.get
-
-      # it's a tag, so attempt to dereference it
-      let
-        target = thing.get.target
-      if target.isErr:
-        # if that failed, just continue to the next name versus error'ing
-        debug &"failed target for `{name}`: " & $target.error
-        continue
-      # finally, add the thing's target to the table under the current name
-      tags.add name, target.get
+        debug &"failed lookup for `{name}`: {thing.error}"
+      else:
+        # peel and add the thing to the tag table
+        let code = tags.addTag(name, thing.get)
+        if code != grcOk:
+          debug &"failed peel for `{name}`: {code}"
 
     # don't forget to actually populate the result, i mean, who would be
     # so stupid as to not actually return the result?  and then cut a new
@@ -1229,7 +1249,7 @@ proc push*(walker: GitRevWalker; oid: GitOid): GitResultCode =
     result = git_revwalk_push(walker, oid).grc
 
 iterator revWalk*(repo: GitRepository; walker: GitRevWalker;
-                  start: GitOid): GitResult[GitThing] =
+                  start: sink GitOid): GitResult[GitThing] =
   ## sic the walker on a repo starting with the given oid
   withGit:
     var
@@ -1244,7 +1264,12 @@ iterator revWalk*(repo: GitRepository; walker: GitRevWalker;
       case code:
       of grcOk:
         # a successful lookup; yield a new thing using the commit
-        yield ok[GitThing](newThing(commit))
+        let
+          dupe = commit.copy
+        if dupe.isErr:
+          yield err[GitThing](dupe.error)
+          break
+        yield ok[GitThing](newThing(dupe.get))
       of grcNotFound:
         # not found; we're done the walk
         break
@@ -1387,53 +1412,58 @@ iterator commitsForSpec*(repo: GitRepository;
     defer:
       dealloc options
 
-    let
-      code = git_diff_options_init(options, GIT_DIFF_OPTIONS_VERSION).grc
-    if code != grcOk:
-      yield err[GitThing](code)
-    else:
+    block master:
+      let
+        code = git_diff_options_init(options, GIT_DIFF_OPTIONS_VERSION).grc
+      if code != grcOk:
+        yield err[GitThing](code)
+        break master
+
       options.pathspec.count = len(spec).cuint
       options.pathspec.strings = cast[ptr cstring](allocCStringArray(spec))
-
       # we'll free the strings array later
       defer:
         deallocCStringArray(cast[cstringArray](options.pathspec.strings))
 
-      block master:
-        # setup a similar pathspec for matching against trees, and free it later
-        ps := newPathSpec(spec):
-          yield err[GitThing](code)
-          break
+      # setup a pathspec for matching against trees, and free it later
+      ps := newPathSpec(spec):
+        yield err[GitThing](code)
+        break master
 
-        # we'll need a walker, and we'll want it freed
-        walker := repo.newRevWalk:
-          yield err[GitThing](code)
-          break
+      # we'll need a walker, and we'll want it freed
+      walker := repo.newRevWalk:
+        yield err[GitThing](code)
+        break master
 
-        # find the head
-        head := repo.getHeadOid:
-          # no head, no problem
-          break
+      # find the head
+      head := repo.getHeadOid:
+        # no head, no problem
+        break master
 
-        # start at the head
-        gitTrap walker.push(head):
-          break
+      # start at the head
+      gitTrap walker.push(head):
+        break master
 
-        # iterate over ALL the commits
-        # pass a copy of the head oid so revwalk can free it
-        for rev in repo.revWalk(walker, head.copy):
-          # if there's an error, yield it
-          if rev.isErr:
+      # iterate over ALL the commits
+      # pass a copy of the head oid so revwalk can free it
+      for rev in repo.revWalk(walker, head.copy):
+        # if there's an error, yield it
+        if rev.isErr:
+          yield rev
+          break master
+        else:
+          let
+            matched = rev.get.commit.parentsMatch(options, ps)
+          if matched.isOk and matched.get:
+            # all the parents matched, so yield this revision
             yield rev
           else:
-            let
-              matched = rev.get.commit.parentsMatch(options, ps)
+            # we're not going to emit this revision, so free it
+            free rev.get
             if matched.isErr:
               # the matching process produced an error
               yield err[GitThing](matched.error)
-            elif matched.get:
-              # all the parents matched
-              yield rev
+              break master
 
 proc tagCreateLightweight*(repo: GitRepository; target: GitThing;
                            name: string; force = false): GitResult[GitOid] =
