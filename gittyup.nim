@@ -489,7 +489,9 @@ template withResultOf(gitsaid: cint | GitResultCode; body: untyped) =
 
 proc free*[T: GitHeapGits](point: ptr T) =
   withGit:
-    if point != nil:
+    if point == nil:
+      warn "attempt to free nil git heap object"
+    else:
       when T is git_repository:
         git_repository_free(point)
       elif T is git_reference:
@@ -530,6 +532,8 @@ proc free*[T: GitHeapGits](point: ptr T) =
 proc free*[T: NimHeapGits](point: ptr T) =
   if point != nil:
     dealloc(point)
+  else:
+    warn "attempt to free nil nim heap git object"
 
 proc free*(thing: sink GitThing) =
   withGit:
@@ -1522,6 +1526,7 @@ proc branchRemoteName*(repo: GitRepository; branch: string): GitResult[GitBuf] =
 iterator branches*(repo: GitRepository;
                    flags = {gbtLocal, gbtRemote}): GitResult[GitReference] =
   ## this time, you're just gonna have to guess at what this proc might do...
+  ## (also, you're just gonna have to free your references...)
   if gbtAll in flags or flags.len == 0:
     raise newException(Defect, "now see here, chuckles")
 
@@ -1541,7 +1546,7 @@ iterator branches*(repo: GitRepository;
     # follow close 'cause it's about to get weird
     block iteration:
       var
-        iter: ptr git_branch_iterator
+        iter: ptr git_branch_iterator = nil
         # create an iterator
         code = git_branch_iterator_new(addr iter, repo, list).grc
       # if we couldn't create the iterator,
@@ -1555,19 +1560,20 @@ iterator branches*(repo: GitRepository;
       # iterate
       while true:
         var
-          branch: GitReference
+          branch: GitReference = nil
         # depending on whether we were able to advance,
         code = git_branch_next(addr branch, addr list, iter).grc
         case code:
         of grcOk:
-          defer:
-            branch.free
-          # issue a branch result (and free it later)
+          assert branch != nil
+          # issue a branch result
           yield ok(branch)
         of grcIterOver:
+          assert branch == nil
           # or end iteration normally
           break iteration
         else:
+          assert branch == nil
           # or end iteration with an error emission
           yield err[GitReference](code)
           break iteration
@@ -1589,6 +1595,7 @@ proc newSignature*(name, email: string; time: Time): GitResult[GitSignature] =
       signature: GitSignature
     withResultOf git_signature_new(addr signature, name, email,
                                    time.toUnix.git_time_t, 0.cint):
+      assert signature != nil
       result.ok signature
 
 proc defaultSignature*(repo: GitRepository): GitResult[GitSignature] =
@@ -1597,14 +1604,17 @@ proc defaultSignature*(repo: GitRepository): GitResult[GitSignature] =
     var
       signature: GitSignature
     withResultOf git_signature_default(addr signature, repo):
+      assert signature != nil
       result.ok signature
 
 proc defaultSignature*(repo: GitRepository; time: Time): GitResult[GitSignature] =
   ## create a new signature using git configuration; must be freed
+  assert repo != nil
   result = repo.defaultSignature
   if result.isOk:
     var
       sig = result.get
+    assert sig != nil
     result = newSignature($sig.name, $sig.email, time)
 
 proc tagCreate*(repo: GitRepository; target: GitThing; name: string;
@@ -1631,6 +1641,8 @@ proc tagCreate*(repo: GitRepository; target: GitThing; name: string;
 proc tagCreate*(repo: GitRepository; target: GitThing; name: string;
                 message = ""; force = false): GitResult[GitOid] =
   ## lightweight routine to create a heavyweight signed and dated tag
+  assert repo != nil
+  assert target != nil and target.o != nil
   withGit:
     let
       tagger = target.committer  # the committer, as opposed to the author
@@ -1640,6 +1652,7 @@ proc tagCreate*(repo: GitRepository; target: GitThing; name: string;
 proc tagCreate*(target: GitThing; name: string;
                 message = ""; force = false): GitResult[GitOid] =
   ## lightweight routine to create a heavyweight signed and dated tag
+  assert target != nil and target.o != nil
   withGit:
     let
       repo = target.owner        # ie. the repository that owns the target

@@ -103,11 +103,9 @@ suite "gittyup":
         echo "thing arrived"
         check thing.isOk
         if thing.isOk:
-          echo "thing is ok"
-          echo thing.get
-          echo "adding..."
+          echo "adding...", thing.get
           things.add thing.get
-          echo "added"
+          echo "added; now have ", things.len, " things"
       check things.len > 10
       block found:
         for thing in things.items:
