@@ -992,16 +992,8 @@ function main() {
     title="GitStatusList = ptr git_status_list"><wbr />Git<wbr />Status<wbr />List<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#GitTree"
     title="GitTree = ptr git_tree"><wbr />Git<wbr />Tree<span class="attachedType"></span></a></li>
-  <li><a class="reference" href="#GitClone"
-    title="GitClone = object
-  url*: cstring
-  directory*: cstring
-  repo*: GitRepository
-  options*: ptr git_clone_options"><wbr />Git<wbr />Clone<span class="attachedType"></span></a></li>
-  <li><a class="reference" href="#GitOpen"
-    title="GitOpen = object
-  path*: cstring
-  repo*: GitRepository"><wbr />Git<wbr />Open<span class="attachedType"></span></a></li>
+  <li><a class="reference" href="#GitSignature"
+    title="GitSignature = ptr git_signature"><wbr />Git<wbr />Signature<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#GitTagTable"
     title="GitTagTable = OrderedTableRef[string, GitThing]"><wbr />Git<wbr />Tag<wbr />Table<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#GitResult"
@@ -1032,14 +1024,12 @@ function main() {
     title="free[T: GitHeapGits](point: ptr T)"><wbr />free<span class="attachedType"></span></a></li>
   <li><a class="reference" href="#free%2Cptr.T_2"
     title="free[T: NimHeapGits](point: ptr T)"><wbr />free<span class="attachedType"></span></a></li>
-  <li><a class="reference" href="#free%2CGitClone"
-    title="free(clone: GitClone)"><wbr />free<span class="attachedType">GitClone</span></a></li>
-  <li><a class="reference" href="#free%2CGitOpen"
-    title="free(opened: GitOpen)"><wbr />free<span class="attachedType">GitOpen</span></a></li>
   <li><a class="reference" href="#free%2CGitThing"
     title="free(thing: GitThing)"><wbr />free<span class="attachedType">GitThing</span></a></li>
   <li><a class="reference" href="#free%2Cseq%5BGitTreeEntry%5D"
     title="free(entries: GitTreeEntries)"><wbr />free<span class="attachedType">GitTreeEntries</span></a></li>
+  <li><a class="reference" href="#copy%2CGitOid"
+    title="copy(oid: GitOid): GitOid"><wbr />copy<span class="attachedType">GitOid</span></a></li>
   <li><a class="reference" href="#short%2CGitOid%2Cint"
     title="short(oid: GitOid; size: int): string"><wbr />short<span class="attachedType">GitOid</span></a></li>
   <li><a class="reference" href="#url%2CGitRemote"
@@ -1077,7 +1067,7 @@ function main() {
   <li><a class="reference" href="#summary%2CGitThing"
     title="summary(thing: GitThing): string"><wbr />summary<span class="attachedType">GitThing</span></a></li>
   <li><a class="reference" href="#free%2CGitTagTable"
-    title="free(table: var GitTagTable)"><wbr />free<span class="attachedType">GitTagTable</span></a></li>
+    title="free(table: GitTagTable)"><wbr />free<span class="attachedType">GitTagTable</span></a></li>
   <li><a class="reference" href="#hash%2CGitOid"
     title="hash(oid: GitOid): Hash"><wbr />hash<span class="attachedType">GitOid</span></a></li>
   <li><a class="reference" href="#hash%2CGitTag"
@@ -1086,6 +1076,10 @@ function main() {
     title="hash(thing: GitThing): Hash"><wbr />hash<span class="attachedType">GitThing</span></a></li>
   <li><a class="reference" href="#commit%2CGitThing"
     title="commit(thing: GitThing): GitCommit"><wbr />commit<span class="attachedType">GitThing</span></a></li>
+  <li><a class="reference" href="#committer%2CGitThing"
+    title="committer(thing: GitThing): GitSignature"><wbr />committer<span class="attachedType">GitThing</span></a></li>
+  <li><a class="reference" href="#author%2CGitThing"
+    title="author(thing: GitThing): GitSignature"><wbr />author<span class="attachedType">GitThing</span></a></li>
   <li><a class="reference" href="#clone%2CUri%2Cstring%2Cstring"
     title="clone(uri: Uri; path: string; branch = &quot;&quot;): GitResult[GitRepository]"><wbr />clone<span class="attachedType">GitResult</span></a></li>
   <li><a class="reference" href="#setHeadDetached%2CGitRepository%2CGitOid"
@@ -1123,7 +1117,7 @@ function main() {
   <li><a class="reference" href="#shortestTag%2CGitTagTable%2Cstring"
     title="shortestTag(table: GitTagTable; oid: string): string"><wbr />shortest<wbr />Tag<span class="attachedType">GitTagTable</span></a></li>
   <li><a class="reference" href="#getHeadOid%2CGitRepository"
-    title="getHeadOid(repository: GitRepository): GitResult[GitOid]"><wbr />get<wbr />Head<wbr />Oid<span class="attachedType">GitRepository</span></a></li>
+    title="getHeadOid(repo: GitRepository): GitResult[GitOid]"><wbr />get<wbr />Head<wbr />Oid<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#repositoryState%2CGitRepository"
     title="repositoryState(repository: GitRepository): GitRepoState"><wbr />repository<wbr />State<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#checkoutTree%2CGitRepository%2CGitThing"
@@ -1159,9 +1153,14 @@ function main() {
     title="push(walker: GitRevWalker; oid: GitOid): GitResultCode"><wbr />push<span class="attachedType">GitRevWalker</span></a></li>
   <li><a class="reference" href="#newPathSpec%2CopenArray%5Bstring%5D"
     title="newPathSpec(spec: openArray[string]): GitResult[GitPathSpec]"><wbr />new<wbr />Path<wbr />Spec<span class="attachedType">GitResult</span></a></li>
+  <li><a class="reference" href="#tagCreateLightweight%2CGitRepository%2CGitThing%2Cstring"
+    title="tagCreateLightweight(repo: GitRepository; target: GitThing; name: string;
+                     force = false): GitResult[GitOid]"><wbr />tag<wbr />Create<wbr />Lightweight<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#tagCreateLightweight%2CGitRepository%2Cstring%2CGitThing"
     title="tagCreateLightweight(repo: GitRepository; name: string; target: GitThing;
                      force = false): GitResult[GitOid]"><wbr />tag<wbr />Create<wbr />Lightweight<span class="attachedType">GitRepository</span></a></li>
+  <li><a class="reference" href="#tagCreateLightweight%2CGitThing%2Cstring"
+    title="tagCreateLightweight(target: GitThing; name: string; force = false): GitResult[GitOid]"><wbr />tag<wbr />Create<wbr />Lightweight<span class="attachedType">GitThing</span></a></li>
   <li><a class="reference" href="#branchUpstream%2CGitReference"
     title="branchUpstream(branch: GitReference): GitResult[GitReference]"><wbr />branch<wbr />Upstream<span class="attachedType">GitReference</span></a></li>
   <li><a class="reference" href="#setBranchUpstream%2CGitReference%2Cstring"
@@ -1170,6 +1169,22 @@ function main() {
     title="branchRemoteName(repo: GitRepository; branch: string): GitResult[GitBuf]"><wbr />branch<wbr />Remote<wbr />Name<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#hasThing%2CGitTagTable%2CGitThing"
     title="hasThing(tags: GitTagTable; thing: GitThing): bool"><wbr />has<wbr />Thing<span class="attachedType">GitTagTable</span></a></li>
+  <li><a class="reference" href="#newSignature%2Cstring%2Cstring%2CTime"
+    title="newSignature(name, email: string; time: Time): GitResult[GitSignature]"><wbr />new<wbr />Signature<span class="attachedType">GitResult</span></a></li>
+  <li><a class="reference" href="#defaultSignature%2CGitRepository"
+    title="defaultSignature(repo: GitRepository): GitResult[GitSignature]"><wbr />default<wbr />Signature<span class="attachedType">GitRepository</span></a></li>
+  <li><a class="reference" href="#defaultSignature%2CGitRepository%2CTime"
+    title="defaultSignature(repo: GitRepository; time: Time): GitResult[GitSignature]"><wbr />default<wbr />Signature<span class="attachedType">GitRepository</span></a></li>
+  <li><a class="reference" href="#tagCreate%2CGitRepository%2CGitThing%2Cstring%2CGitSignature%2Cstring"
+    title="tagCreate(repo: GitRepository; target: GitThing; name: string; tagger: GitSignature;
+          message = &quot;&quot;; force = false): GitResult[GitOid]"><wbr />tag<wbr />Create<span class="attachedType">GitRepository</span></a></li>
+  <li><a class="reference" href="#tagCreate%2CGitRepository%2CGitThing%2Cstring%2Cstring"
+    title="tagCreate(repo: GitRepository; target: GitThing; name: string; message = &quot;&quot;;
+          force = false): GitResult[GitOid]"><wbr />tag<wbr />Create<span class="attachedType">GitRepository</span></a></li>
+  <li><a class="reference" href="#tagCreate%2CGitThing%2Cstring%2Cstring"
+    title="tagCreate(target: GitThing; name: string; message = &quot;&quot;; force = false): GitResult[GitOid]"><wbr />tag<wbr />Create<span class="attachedType">GitThing</span></a></li>
+  <li><a class="reference" href="#tagDelete%2CGitRepository%2Cstring"
+    title="tagDelete(repo: GitRepository; name: string): GitResultCode"><wbr />tag<wbr />Delete<span class="attachedType">GitRepository</span></a></li>
 
   </ul>
 </li>
@@ -1180,6 +1195,8 @@ function main() {
     title="name(entry: GitTreeEntry): string"><wbr />name<span class="attachedType">GitTreeEntry</span></a></li>
   <li><a class="reference" href="#name%2CGitRemote"
     title="name(remote: GitRemote): string"><wbr />name<span class="attachedType">GitRemote</span></a></li>
+  <li><a class="reference" href="#%24%2CGitTagTable"
+    title="`$`(tags: GitTagTable): string"><wbr />`$`<span class="attachedType">GitTagTable</span></a></li>
   <li><a class="reference" href="#%24%2CGitPathSpec"
     title="`$`(ps: GitPathSpec): string"><wbr />`$`<span class="attachedType">GitPathSpec</span></a></li>
   <li><a class="reference" href="#%24%2CGitRevWalker"
@@ -1222,8 +1239,7 @@ function main() {
     title="status(repository: GitRepository; show: GitStatusShow; flags = defaultStatusFlags): GitResult[
     GitStatus]"><wbr />status<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#revWalk.i%2CGitRepository%2CGitRevWalker%2CGitOid"
-    title="revWalk(repo: GitRepository; walker: GitRevWalker; start: GitOid): tuple[
-    thing: GitThing, code: GitResultCode]"><wbr />rev<wbr />Walk<span class="attachedType">GitRepository</span></a></li>
+    title="revWalk(repo: GitRepository; walker: GitRevWalker; start: GitOid): GitResult[GitThing]"><wbr />rev<wbr />Walk<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#commitsForSpec.i%2CGitRepository%2CopenArray%5Bstring%5D"
     title="commitsForSpec(repo: GitRepository; spec: openArray[string]): GitResult[GitThing]"><wbr />commits<wbr />For<wbr />Spec<span class="attachedType">GitRepository</span></a></li>
   <li><a class="reference" href="#branches.i%2CGitRepository"
@@ -1242,14 +1258,14 @@ function main() {
     title="gitTrap(allocd: typed; code: GitResultCode; body: untyped)"><wbr />git<wbr />Trap<span class="attachedType">GitResultCode</span></a></li>
   <li><a class="reference" href="#gitTrap.t%2CGitResultCode%2Cuntyped"
     title="gitTrap(code: GitResultCode; body: untyped)"><wbr />git<wbr />Trap<span class="attachedType">GitResultCode</span></a></li>
-  <li><a class="reference" href="#ok.t%2CGitResult%2Cauto"
-    title="ok(self: var GitResult; x: auto)"><wbr />ok<span class="attachedType">GitResult</span></a></li>
-  <li><a class="reference" href="#err.t%2CGitResult%2Cauto"
-    title="err(self: var GitResult; x: auto)"><wbr />err<span class="attachedType">GitResult</span></a></li>
+  <li><a class="reference" href="#ok.t%2CGitResult%5BT%5D%2CT"
+    title="ok[T](self: var GitResult[T]; x: T): auto"><wbr />ok<span class="attachedType">GitResult</span></a></li>
+  <li><a class="reference" href="#err.t%2CGitResult%5BT%5D%2CGitResultCode"
+    title="err[T](self: var GitResult[T]; x: GitResultCode): auto"><wbr />err<span class="attachedType">GitResult</span></a></li>
   <li><a class="reference" href="#ok.t%2CT"
-    title="ok[T](v: T): auto"><wbr />ok<span class="attachedType"></span></a></li>
-  <li><a class="reference" href="#err.t%2CT"
-    title="err[T](v: T): auto"><wbr />err<span class="attachedType"></span></a></li>
+    title="ok[T](x: T): auto"><wbr />ok<span class="attachedType"></span></a></li>
+  <li><a class="reference" href="#err.t%2CGitResultCode"
+    title="err[T](x: GitResultCode): auto"><wbr />err<span class="attachedType">GitResultCode</span></a></li>
   <li><a class="reference" href="#%3A%3D.t%2C%2CResult%5BT%2CGitResultCode%5D%2Cuntyped"
     title="`:=`[T](v: untyped{nkIdent}; vv: Result[T, GitResultCode]; body: untyped): untyped"><wbr />`:=`<span class="attachedType">GitResultCode</span></a></li>
 
@@ -1593,23 +1609,8 @@ function main() {
 
 
 </dd>
-<a id="GitClone"></a>
-<dt><pre><a href="gittyup.html#GitClone"><span class="Identifier">GitClone</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">url</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">cstring</span>
-  <span class="Identifier">directory</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">cstring</span>
-  <span class="Identifier">repo</span><span class="Operator">*</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a>
-  <span class="Identifier">options</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">ptr</span> <span class="Identifier">git_clone_options</span>
-</pre></dt>
-<dd>
-
-
-
-</dd>
-<a id="GitOpen"></a>
-<dt><pre><a href="gittyup.html#GitOpen"><span class="Identifier">GitOpen</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">path</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">cstring</span>
-  <span class="Identifier">repo</span><span class="Operator">*</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a>
-</pre></dt>
+<a id="GitSignature"></a>
+<dt><pre><a href="gittyup.html#GitSignature"><span class="Identifier">GitSignature</span></a> <span class="Other">=</span> <span class="Keyword">ptr</span> <span class="Identifier">git_signature</span></pre></dt>
 <dd>
 
 
@@ -1688,22 +1689,8 @@ function main() {
 
 
 </dd>
-<a id="free,GitClone"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#free%2CGitClone"><span class="Identifier">free</span></a><span class="Other">(</span><span class="Identifier">clone</span><span class="Other">:</span> <a href="gittyup.html#GitClone"><span class="Identifier">GitClone</span></a><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-
-
-</dd>
-<a id="free,GitOpen"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#free%2CGitOpen"><span class="Identifier">free</span></a><span class="Other">(</span><span class="Identifier">opened</span><span class="Other">:</span> <a href="gittyup.html#GitOpen"><span class="Identifier">GitOpen</span></a><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-
-
-</dd>
 <a id="free,GitThing"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#free%2CGitThing"><span class="Identifier">free</span></a><span class="Other">(</span><span class="Identifier">thing</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#free%2CGitThing"><span class="Identifier">free</span></a><span class="Other">(</span><span class="Identifier">thing</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 
@@ -1714,6 +1701,13 @@ function main() {
 <dd>
 
 
+
+</dd>
+<a id="copy,GitOid"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#copy%2CGitOid"><span class="Identifier">copy</span></a><span class="Other">(</span><span class="Identifier">oid</span><span class="Other">:</span> <a href="gittyup.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitOid"><span class="Identifier">GitOid</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+create a copy of the oid; free it with dealloc
 
 </dd>
 <a id="short,GitOid,int"></a>
@@ -1844,7 +1838,7 @@ produce a summary for a given commit
 
 </dd>
 <a id="free,GitTagTable"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#free%2CGitTagTable"><span class="Identifier">free</span></a><span class="Other">(</span><span class="Identifier">table</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitTagTable"><span class="Identifier">GitTagTable</span></a><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#free%2CGitTagTable"><span class="Identifier">free</span></a><span class="Other">(</span><span class="Identifier">table</span><span class="Other">:</span> <a href="gittyup.html#GitTagTable"><span class="Identifier">GitTagTable</span></a><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 free a tag table
@@ -1876,6 +1870,20 @@ free a tag table
 <dd>
 
 turn a thing into its commit
+
+</dd>
+<a id="committer,GitThing"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#committer%2CGitThing"><span class="Identifier">committer</span></a><span class="Other">(</span><span class="Identifier">thing</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitSignature"><span class="Identifier">GitSignature</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+get the committer of a thing that's a commit
+
+</dd>
+<a id="author,GitThing"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#author%2CGitThing"><span class="Identifier">author</span></a><span class="Other">(</span><span class="Identifier">thing</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitSignature"><span class="Identifier">GitSignature</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+get the author of a thing that's a commit
 
 </dd>
 <a id="clone,Uri,string,string"></a>
@@ -2005,7 +2013,7 @@ instantiate a new table
 <a id="tagTable,GitRepository"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#tagTable%2CGitRepository"><span class="Identifier">tagTable</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitTagTable"><span class="Identifier">GitTagTable</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span>
     <span class="Identifier">ResultError[system.void]</span><span class="Other">,</span> <span class="Identifier">ResultError[gittyup.GitResultCode]</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span>
-    <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 compose a table of tags and their associated references
@@ -2019,8 +2027,8 @@ pick the shortest tag that matches the oid supplied
 
 </dd>
 <a id="getHeadOid,GitRepository"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#getHeadOid%2CGitRepository"><span class="Identifier">getHeadOid</span></a><span class="Other">(</span><span class="Identifier">repository</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span>
-    <span class="Identifier">ResultError[gittyup.GitResultCode]</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#getHeadOid%2CGitRepository"><span class="Identifier">getHeadOid</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 try to retrieve the #head oid from a repository
@@ -2046,7 +2054,7 @@ checkout a repository using a thing
 <a id="checkoutTree,GitRepository,string"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#checkoutTree%2CGitRepository%2Cstring"><span class="Identifier">checkoutTree</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">reference</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span>
                  <span class="Identifier">strategy</span> <span class="Other">=</span> <span class="Identifier">defaultCheckoutStrategy</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">Defect</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 checkout a repository using a reference string
@@ -2155,10 +2163,30 @@ add a tree to be walked
 instantiate a new path spec from a strarray
 
 </dd>
-<a id="tagCreateLightweight,GitRepository,string,GitThing"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#tagCreateLightweight%2CGitRepository%2Cstring%2CGitThing"><span class="Identifier">tagCreateLightweight</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">target</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span>
+<a id="tagCreateLightweight,GitRepository,GitThing,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#tagCreateLightweight%2CGitRepository%2CGitThing%2Cstring"><span class="Identifier">tagCreateLightweight</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">target</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span>
                          <span class="Identifier">force</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+create a new lightweight tag in the repository
+
+</dd>
+<a id="tagCreateLightweight,GitRepository,string,GitThing"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#tagCreateLightweight%2CGitRepository%2Cstring%2CGitThing"><span class="Identifier">tagCreateLightweight</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">target</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span>
+                         <span class="Identifier">force</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">deprecated</span><span class="Other">,</span>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+  <div class="deprecation-message">
+    <b>Deprecated</b> 
+  </div>
+
+create a new lightweight tag in the repository
+
+</dd>
+<a id="tagCreateLightweight,GitThing,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#tagCreateLightweight%2CGitThing%2Cstring"><span class="Identifier">tagCreateLightweight</span></a><span class="Other">(</span><span class="Identifier">target</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">force</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span>
+    <a href="gittyup.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 create a new lightweight tag in the repository
@@ -2195,6 +2223,63 @@ try to fetch a single remote for a remote tracking branch
 true if the thing is tagged; think hasValue() to table's hasKey()
 
 </dd>
+<a id="newSignature,string,string,Time"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#newSignature%2Cstring%2Cstring%2CTime"><span class="Identifier">newSignature</span></a><span class="Other">(</span><span class="Identifier">name</span><span class="Other">,</span> <span class="Identifier">email</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">time</span><span class="Other">:</span> <span class="Identifier">Time</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitSignature"><span class="Identifier">GitSignature</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+create a new signature using arguments; must be freed (this does not yet support the offset-in-minutes specification)
+
+</dd>
+<a id="defaultSignature,GitRepository"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#defaultSignature%2CGitRepository"><span class="Identifier">defaultSignature</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitSignature"><span class="Identifier">GitSignature</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+create a new signature using git configuration; must be freed
+
+</dd>
+<a id="defaultSignature,GitRepository,Time"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#defaultSignature%2CGitRepository%2CTime"><span class="Identifier">defaultSignature</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">time</span><span class="Other">:</span> <span class="Identifier">Time</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitSignature"><span class="Identifier">GitSignature</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[gittyup.GitResultCode]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+create a new signature using git configuration; must be freed
+
+</dd>
+<a id="tagCreate,GitRepository,GitThing,string,GitSignature,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#tagCreate%2CGitRepository%2CGitThing%2Cstring%2CGitSignature%2Cstring"><span class="Identifier">tagCreate</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">target</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span>
+              <span class="Identifier">tagger</span><span class="Other">:</span> <a href="gittyup.html#GitSignature"><span class="Identifier">GitSignature</span></a><span class="Other">;</span> <span class="Identifier">message</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">;</span> <span class="Identifier">force</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+create a new tag in the repository with signature, message
+
+</dd>
+<a id="tagCreate,GitRepository,GitThing,string,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#tagCreate%2CGitRepository%2CGitThing%2Cstring%2Cstring"><span class="Identifier">tagCreate</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">target</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">message</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">;</span>
+              <span class="Identifier">force</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><a href="gittyup.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+lightweight routine to create a heavyweight signed and dated tag
+
+</dd>
+<a id="tagCreate,GitThing,string,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#tagCreate%2CGitThing%2Cstring%2Cstring"><span class="Identifier">tagCreate</span></a><span class="Other">(</span><span class="Identifier">target</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">message</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">;</span> <span class="Identifier">force</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span>
+    <a href="gittyup.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+lightweight routine to create a heavyweight signed and dated tag
+
+</dd>
+<a id="tagDelete,GitRepository,string"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#tagDelete%2CGitRepository%2Cstring"><span class="Identifier">tagDelete</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+remove a tag
+
+</dd>
 
 </dl></div>
 <div class="section" id="13">
@@ -2209,6 +2294,13 @@ true if the thing is tagged; think hasValue() to table's hasKey()
 </dd>
 <a id="name,GitRemote"></a>
 <dt><pre><span class="Keyword">func</span> <a href="#name%2CGitRemote"><span class="Identifier">name</span></a><span class="Other">(</span><span class="Identifier">remote</span><span class="Other">:</span> <a href="gittyup.html#GitRemote"><span class="Identifier">GitRemote</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
+<a id="$,GitTagTable"></a>
+<dt><pre><span class="Keyword">func</span> <a href="#%24%2CGitTagTable"><span class="Identifier">`$`</span></a><span class="Other">(</span><span class="Identifier">tags</span><span class="Other">:</span> <a href="gittyup.html#GitTagTable"><span class="Identifier">GitTagTable</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 
@@ -2341,9 +2433,9 @@ iterate over files in the repo using the given search flags
 
 </dd>
 <a id="revWalk.i,GitRepository,GitRevWalker,GitOid"></a>
-<dt><pre><span class="Keyword">iterator</span> <a href="#revWalk.i%2CGitRepository%2CGitRevWalker%2CGitOid"><span class="Identifier">revWalk</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">walker</span><span class="Other">:</span> <a href="gittyup.html#GitRevWalker"><span class="Identifier">GitRevWalker</span></a><span class="Other">;</span> <span class="Identifier">start</span><span class="Other">:</span> <a href="gittyup.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">tuple</span><span class="Other">[</span>
-    <span class="Identifier">thing</span><span class="Other">:</span> <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">,</span> <span class="Identifier">code</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span>
-    <span class="Identifier">ResultError[gittyup.GitResultCode]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">iterator</span> <a href="#revWalk.i%2CGitRepository%2CGitRevWalker%2CGitOid"><span class="Identifier">revWalk</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">walker</span><span class="Other">:</span> <a href="gittyup.html#GitRevWalker"><span class="Identifier">GitRevWalker</span></a><span class="Other">;</span> <span class="Identifier">start</span><span class="Other">:</span> <a href="gittyup.html#GitOid"><span class="Identifier">GitOid</span></a><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span>
+    <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[gittyup.GitResultCode]</span><span class="Other">,</span>
+                       <span class="Identifier">ResultError[system.void]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 sic the walker on a repo starting with the given oid
@@ -2351,9 +2443,8 @@ sic the walker on a repo starting with the given oid
 </dd>
 <a id="commitsForSpec.i,GitRepository,openArray[string]"></a>
 <dt><pre><span class="Keyword">iterator</span> <a href="#commitsForSpec.i%2CGitRepository%2CopenArray%5Bstring%5D"><span class="Identifier">commitsForSpec</span></a><span class="Other">(</span><span class="Identifier">repo</span><span class="Other">:</span> <a href="gittyup.html#GitRepository"><span class="Identifier">GitRepository</span></a><span class="Other">;</span> <span class="Identifier">spec</span><span class="Other">:</span> <span class="Identifier">openArray</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span>
-    <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">,</span>
-                       <span class="Identifier">ResultError[gittyup.GitResultCode]</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span>
-               <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <a href="gittyup.html#GitThing"><span class="Identifier">GitThing</span></a><span class="Other">]</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ResultError[system.void]</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span>
+                       <span class="Identifier">ResultError[gittyup.GitResultCode]</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 yield each commit that matches the provided pathspec
@@ -2400,29 +2491,29 @@ a version of gitTrap that expects failure; no error messages!
 
 
 </dd>
-<a id="ok.t,GitResult,auto"></a>
-<dt><pre><span class="Keyword">template</span> <a href="#ok.t%2CGitResult%2Cauto"><span class="Identifier">ok</span></a><span class="Other">(</span><span class="Identifier">self</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">;</span> <span class="Identifier">x</span><span class="Other">:</span> <span class="Identifier">auto</span><span class="Other">)</span></pre></dt>
+<a id="ok.t,GitResult[T],T"></a>
+<dt><pre><span class="Keyword">template</span> <a href="#ok.t%2CGitResult%5BT%5D%2CT"><span class="Identifier">ok</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">self</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">x</span><span class="Other">:</span> <span class="Identifier">T</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">auto</span></pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="err.t,GitResult,auto"></a>
-<dt><pre><span class="Keyword">template</span> <a href="#err.t%2CGitResult%2Cauto"><span class="Identifier">err</span></a><span class="Other">(</span><span class="Identifier">self</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">;</span> <span class="Identifier">x</span><span class="Other">:</span> <span class="Identifier">auto</span><span class="Other">)</span></pre></dt>
+<a id="err.t,GitResult[T],GitResultCode"></a>
+<dt><pre><span class="Keyword">template</span> <a href="#err.t%2CGitResult%5BT%5D%2CGitResultCode"><span class="Identifier">err</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">self</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="gittyup.html#GitResult"><span class="Identifier">GitResult</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">x</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">auto</span></pre></dt>
 <dd>
 
 
 
 </dd>
 <a id="ok.t,T"></a>
-<dt><pre><span class="Keyword">template</span> <a href="#ok.t%2CT"><span class="Identifier">ok</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">v</span><span class="Other">:</span> <span class="Identifier">T</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">auto</span></pre></dt>
+<dt><pre><span class="Keyword">template</span> <a href="#ok.t%2CT"><span class="Identifier">ok</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">x</span><span class="Other">:</span> <span class="Identifier">T</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">auto</span></pre></dt>
 <dd>
 
 
 
 </dd>
-<a id="err.t,T"></a>
-<dt><pre><span class="Keyword">template</span> <a href="#err.t%2CT"><span class="Identifier">err</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">v</span><span class="Other">:</span> <span class="Identifier">T</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">auto</span></pre></dt>
+<a id="err.t,GitResultCode"></a>
+<dt><pre><span class="Keyword">template</span> <a href="#err.t%2CGitResultCode"><span class="Identifier">err</span></a><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">x</span><span class="Other">:</span> <a href="gittyup.html#GitResultCode"><span class="Identifier">GitResultCode</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">auto</span></pre></dt>
 <dd>
 
 
@@ -2445,7 +2536,7 @@ a version of gitTrap that expects failure; no error messages!
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2020-01-03 02:32:49 UTC</small>
+        <small>Made with Nim. Generated: 2020-01-06 16:43:28 UTC</small>
       </div>
     </div>
   </div>
