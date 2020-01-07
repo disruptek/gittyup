@@ -94,16 +94,13 @@ suite "gittyup":
   when tagtable:
     test "tag table":
       block:
-        let
-          tongue = repo.tagTable
-        if tongue.isErr:
-          #checkpoint code.dumpError
+        tags := repo.tagTable:
+          checkpoint code.dumpError
           check false
           break
-        var
-          tags = tongue.get
         if "test" in tags:
           check repo.tagDelete("test") == grcOk
+        check $tags["1.0.2"].oid == v102
 
   when specing:
     test "commits for spec":
