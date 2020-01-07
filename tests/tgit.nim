@@ -9,7 +9,7 @@ import gittyup
 const
   tagging = true
   tagtable = true
-  specing = false
+  specing = true
   v1 = "555d5d803f1c63f3fad296ba844cd6f718861d0e"
   v102 = "372deb094fb11e56171e5c9785bd316577724f2e"
   cloneme = parseURI"https://github.com/disruptek/gittyup"

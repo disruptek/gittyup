@@ -531,6 +531,8 @@ proc free*[T: GitHeapGits](point: ptr T) =
         git_buf_dispose(point)
       elif T is git_branch_iterator:
         git_branch_iterator_free(point)
+      elif T is git_signature:
+        git_signature_free(point)
       else:
         {.error: "missing a free definition for " & $typeof(T).}
 
@@ -1626,6 +1628,8 @@ proc defaultSignature*(repo: GitRepository; time: Time): GitResult[GitSignature]
   assert repo != nil
   result = repo.defaultSignature
   if result.isOk:
+    defer:
+      free result.get
     var
       sig = result.get
     assert sig != nil
