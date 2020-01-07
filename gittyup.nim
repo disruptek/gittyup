@@ -1,3 +1,4 @@
+import std/math
 import std/times
 import std/logging
 import std/sets
@@ -981,7 +982,7 @@ proc tagTable*(repo: GitRepository): GitResult[GitTagTable] =
 
     # now we know we'll be returning a table, at least
     var
-      tags = newTagTable()
+      tags = newTagTable(nextPowerOfTwo(names.get.len))
 
     # iterate over all the names,
     for name in names.get.items:
