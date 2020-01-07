@@ -9,7 +9,7 @@ import gittyup
 const
   tagging = true
   tagtable = true
-  specing = true
+  specing = false
   v1 = "555d5d803f1c63f3fad296ba844cd6f718861d0e"
   v102 = "372deb094fb11e56171e5c9785bd316577724f2e"
   cloneme = parseURI"https://github.com/disruptek/gittyup"
@@ -79,17 +79,16 @@ suite "gittyup":
 
   when tagging:
     test "create and delete a tag":
-      thing := repo.lookupThing "HEAD":
-        checkpoint code.dumpError
-        check false
-      let
-        oid = thing.tagCreate "test"
-      if oid.isErr:
-        checkpoint oid.error.dumpError
-        check false
-      else:
+      block:
+        thing := repo.lookupThing "HEAD":
+          checkpoint code.dumpError
+          check false
+          break
+        oid := thing.tagCreate "test":
+          checkpoint code.dumpError
+          check false
+          break
         check repo.tagDelete("test") == grcOk
-        dealloc oid.get
 
   when tagtable:
     test "tag table":
