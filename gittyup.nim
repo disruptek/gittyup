@@ -416,9 +416,9 @@ template gitTrap*(code: GitResultCode; body: untyped) =
     body
 
 # set a result variable `self` to value/error
-template ok*[T](self: var GitResult[T]; x: T): auto =
+template ok*[T](self: var Result[T, GitResultCode]; x: T): auto =
   results.ok(self.Result, x)
-template err*[T](self: var GitResult[T]; x: GitResultCode): auto =
+template err*[T](self: var Result[T, GitResultCode]; x: GitResultCode): auto =
   results.err(self.Result, x)
 
 # create a new result (eg. for an iterator)
