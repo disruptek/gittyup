@@ -27,7 +27,7 @@ else:
   {.fatal: "libgit2 version `" & git2SetVer & "` unsupported".}
 
 import nimgit2
-import result as results
+import results
 export results
 
 # there are some name changes between the 0.28 and later versions
@@ -435,11 +435,13 @@ template `:=`*[T](v: untyped{nkIdent}; vv: Result[T, GitResultCode];
     if isOk(vr):
       when defined(debugGit):
         debug "freeing ", $v
+        echo "freeing ", $v
       free(unsafeGet(vr))
   if not isOk(vr):
     var code {.used, inject.} = vr.error
     when defined(debugGit):
       debug "failure ", $v, ": ", $code
+      echo "failure ", $v, ": ", $code
     body
 
 proc normalizeUrl(uri: Uri): Uri =
@@ -493,6 +495,8 @@ proc free*[T: GitHeapGits](point: ptr T) =
     if point == nil:
       warn "attempt to free nil git heap object"
     else:
+      when defined(debugGit):
+        echo "freeeing git"
       when T is git_repository:
         git_repository_free(point)
       elif T is git_reference:
@@ -532,6 +536,8 @@ proc free*[T: GitHeapGits](point: ptr T) =
 
 proc free*[T: NimHeapGits](point: ptr T) =
   if point != nil:
+    when defined(debugGit):
+      echo "freeeing nim", $point
     dealloc(point)
   else:
     warn "attempt to free nil nim heap git object"
@@ -695,12 +701,15 @@ func `$`*(entry: GitTreeEntry): string =
   result = entry.name
 
 func kind(obj: GitObject): GitObjectKind =
+  ## fetch the GitObjectKind of a git object
+  assert obj != nil
   let
     kind = git_object_type(obj)
   result = (kind + GitObjectKind.high.ord - GIT_OBJECT_REF_DELTA).GitObjectKind
 
 func `$`*(obj: GitObject): string =
   ## string representation of git object
+  assert obj != nil
   let
     kind = obj.kind
   case kind:
@@ -708,6 +717,9 @@ func `$`*(obj: GitObject): string =
     result = "{invalid}"
   else:
     result = $kind & "-" & $obj.git_object_id
+
+func `$`*(commit: GitCommit): string =
+  result = $cast[GitObject](commit)
 
 func `$`*(thing: GitThing): string =
   result = $thing.o
@@ -750,17 +762,18 @@ proc summary*(thing: GitThing): string =
     raise newException(ValueError, "dunno how to get a summary: " & $thing)
   result = result.strip
 
-func `$`*(commit: GitCommit): string =
-  result = $cast[GitObject](commit)
-
 proc free*(table: sink GitTagTable) =
   ## free a tag table
   withGit:
-    for tag, obj in table.pairs:
+    when defined(debugGit):
+      echo "free table"
+    for tag, obj in table.mpairs:
       when tag is GitTag:
         tag.free
         obj.free
       elif tag is string:
+        when defined(debugGit):
+          echo "free tag"
         obj.free
       elif tag is GitThing:
         let

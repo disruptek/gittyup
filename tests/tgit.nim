@@ -7,6 +7,9 @@ import std/unittest
 import gittyup
 
 const
+  tagging = true
+  tagtable = true
+  specing = false
   v1 = "555d5d803f1c63f3fad296ba844cd6f718861d0e"
   v102 = "372deb094fb11e56171e5c9785bd316577724f2e"
   cloneme = parseURI"https://github.com/disruptek/gittyup"
@@ -25,13 +28,17 @@ suite "gittyup":
     let
       tmpdir = getTempDir() / "gittyup-" & $getCurrentProcessId() / ""
     tmpdir.cleanup
-    repo := openRepository(getCurrentDir()):
-      checkpoint code.dumpError
-      check false
+    let
+      open = openRepository(getCurrentDir())
+    check open.isOk
+    var repo = open.get
+    #checkpoint code.dumpError
+    #check false
 
   teardown:
     check shutdown()
     tmpdir.cleanup
+    free repo
 
   test "zero errors":
     when defined(posix):
@@ -70,46 +77,64 @@ suite "gittyup":
       check false
     check grsNone == cloned.repositoryState
 
-  test "create and delete a tag":
-    tags := repo.tagTable:
-      checkpoint code.dumpError
-      check false
-    if "test" in tags:
-      check repo.tagDelete("test") == grcOk
-    thing := repo.lookupThing "HEAD":
-      checkpoint code.dumpError
-      check false
-    let
-      oid = thing.tagCreate "test"
-    if oid.isErr:
-      checkpoint oid.error.dumpError
-      check false
-    else:
-      check repo.tagDelete("test") == grcOk
-      dealloc oid.get
-
-  test "commits for spec":
-    # clone ourselves into tmpdir
-    cloned := cloneme.clone(tmpdir):
-      checkpoint code.dumpError
-      check false
-    check grsNone == cloned.repositoryState
-    let
-      dotnimble = "gittyup.nim"
-    block found:
-      var
-        things: seq[GitThing] = @[]
-      for thing in cloned.commitsForSpec(@[dotnimble]):
-        echo "thing arrived"
-        check thing.isOk
-        if thing.isOk:
-          echo "adding...", thing.get
-          things.add thing.get
-          echo "added; now have ", things.len, " things"
-      check things.len > 10
-      block found:
-        for thing in things.items:
-          if $thing.oid == v102:
-            break found
-          free thing
+  when tagging:
+    test "create and delete a tag":
+      thing := repo.lookupThing "HEAD":
+        checkpoint code.dumpError
         check false
+      let
+        oid = thing.tagCreate "test"
+      if oid.isErr:
+        checkpoint oid.error.dumpError
+        check false
+      else:
+        check repo.tagDelete("test") == grcOk
+        dealloc oid.get
+
+  when tagtable:
+    test "tag table":
+      block:
+        let
+          tongue = repo.tagTable
+        if tongue.isErr:
+          #checkpoint code.dumpError
+          check false
+          break
+        var
+          tags = tongue.get
+        if "test" in tags:
+          check repo.tagDelete("test") == grcOk
+
+  when specing:
+    test "commits for spec":
+      # clone ourselves into tmpdir
+      cloned := cloneme.clone(tmpdir):
+        checkpoint code.dumpError
+        check false
+      check grsNone == cloned.repositoryState
+      let
+        dotnimble = "gittyup.nim"
+      block found:
+        var
+          things: seq[GitThing] = @[]
+        proc dump(things: var seq[GitThing]): string =
+          for n in things.items:
+            result &= $n & "\n"
+        for thing in cloned.commitsForSpec(@[dotnimble]):
+          echo "thing arrived"
+          check thing.isOk
+          if thing.isOk:
+            echo "adding...", thing.get
+            when specing:
+              things.add thing.get
+              echo "added; now have ", things.len, " things: ", thing.get
+              echo things.dump
+        when specing:
+          echo "NOW WE FREE"
+          check things.len > 10
+          block found:
+            for thing in things.items:
+              if $thing.oid == v102:
+                break found
+              free thing
+            check false
