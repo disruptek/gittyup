@@ -1303,8 +1303,14 @@ iterator revWalk*(repo: GitRepository; walker: GitRevWalker;
         yield err[GitThing](code)
 
       # now we need to fetch the next oid in the walk
-      let
+      var
         future = walker.next
+
+      # skip the oid if it matches the one we started with
+      if future.isOk and future.get == start:
+        dealloc future.get
+        future = walker.next
+
       if future.isOk:
         # the future oid was retrieved successfully, so
         # we free the previous oid and assign the new one
