@@ -705,9 +705,14 @@ func `$`*(entry: GitTreeEntry): string =
 func kind(obj: GitObject): GitObjectKind =
   ## fetch the GitObjectKind of a git object
   assert obj != nil
+  assert GitObjectKind.high == goRefDelta
   let
     kind = git_object_type(obj)
-  result = (kind + GitObjectKind.high.ord - GIT_OBJECT_REF_DELTA).GitObjectKind
+    offset = kind + GitObjectKind.high.ord - GIT_OBJECT_REF_DELTA
+  if offset in GitObjectKind.low.ord .. GitObjectKind.high.ord:
+    result = offset.GitObjectKind
+  else:
+    result = goInvalid
 
 func `$`*(obj: GitObject): string =
   ## string representation of git object
