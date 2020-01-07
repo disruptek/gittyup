@@ -433,9 +433,6 @@ template `:=`*[T](v: untyped{nkIdent}; vv: Result[T, GitResultCode];
   template v: auto {.used.} = unsafeGet(vr)
   defer:
     if isOk(vr):
-      when defined(debugGit):
-        debug "freeing ", $v
-        echo "freeing ", $v
       free(unsafeGet(vr))
   if not isOk(vr):
     var code {.used, inject.} = vr.error
@@ -577,6 +574,7 @@ proc copy*(oid: GitOid): GitOid =
   assert oid != nil
   result = cast[GitOid](sizeof(git_oid).alloc)
   git_oid_cpy(result, oid)
+  assert result != nil
 
 proc short*(oid: GitOid; size: int): string =
   ## shorten an oid to a string of the given length
@@ -646,22 +644,27 @@ func `$`*(tag: GitTag): string =
 proc oid*(entry: GitTreeEntry): GitOid =
   assert entry != nil
   result = git_tree_entry_id(entry)
+  assert result != nil
 
 proc oid*(got: GitReference): GitOid =
   assert got != nil
   result = git_reference_target(got)
+  assert result != nil
 
 proc oid*(obj: GitObject): GitOid =
   assert obj != nil
   result = git_object_id(obj)
+  assert result != nil
 
 proc oid*(thing: GitThing): GitOid =
   assert thing != nil and thing.o != nil
   result = thing.o.oid
+  assert result != nil
 
 proc oid*(tag: GitTag): GitOid =
   assert tag != nil
   result = git_tag_id(tag)
+  assert result != nil
 
 proc branchName*(got: GitReference): string =
   ## fetch a branch name assuming the reference is a branch
@@ -696,16 +699,19 @@ proc owner*(thing: GitThing): GitRepository =
   ## retrieve the repository that owns this thing
   assert thing != nil and thing.o != nil
   result = git_object_owner(thing.o)
+  assert result != nil
 
 proc owner*(commit: GitCommit): GitRepository =
   ## retrieve the repository that owns this commit
   assert commit != nil
   result = git_commit_owner(commit)
+  assert result != nil
 
 proc owner*(reference: GitReference): GitRepository =
   ## retrieve the repository that owns this reference
   assert reference != nil
   result = git_reference_owner(reference)
+  assert result != nil
 
 proc flags*(status: GitStatus): set[GitStatusFlag] =
   assert status != nil
@@ -809,7 +815,7 @@ proc free*(table: sink GitTagTable) =
   assert table != nil
   withGit:
     when defined(debugGit):
-      echo "free table"
+      echo "\t~> freeing nim", typeof(table)
     for tag, obj in table.mpairs:
       when tag is GitTag:
         tag.free
@@ -817,9 +823,8 @@ proc free*(table: sink GitTagTable) =
         disarm tag
         disarm obj
       elif tag is string:
-        when defined(debugGit):
-          echo "free tag"
         obj.free
+        disarm obj
       elif tag is GitThing:
         let
           same = tag == obj
@@ -987,6 +992,7 @@ proc `==`*(a, b: GitOid): bool =
 proc targetId*(thing: GitThing): GitOid =
   withGit:
     result = git_tag_target_id(cast[GitTag](thing.o))
+    assert result != nil
 
 proc target*(thing: GitThing): GitResult[GitThing] =
   withGit:
@@ -1406,9 +1412,12 @@ proc matchWithParent(commit: GitCommit; nth: cuint;
   assert options != nil
   block:
     var
+      repo = git_commit_owner(commit)
       parent: ptr git_commit
       pt, ct: GitTree
       diff: GitDiff
+
+    assert repo != nil
 
     # get the nth parent
     result = git_commit_parent(addr parent, commit, nth).grc
@@ -1426,9 +1435,7 @@ proc matchWithParent(commit: GitCommit; nth: cuint;
       break
 
     # take a diff the the two trees
-    result = git_diff_tree_to_tree(addr diff,
-                                   git_commit_owner(commit),
-                                   pt, ct, options).grc
+    result = git_diff_tree_to_tree(addr diff, repo, pt, ct, options).grc
     gitTrap diff, result:
       break
 
@@ -1577,11 +1584,6 @@ proc tagCreateLightweight*(repo: GitRepository; target: GitThing;
         break
       # free the oid if we didn't end up using it
       free oid
-
-proc tagCreateLightweight*(repo: GitRepository; name: string; target: GitThing;
-                           force = false): GitResult[GitOid] {.deprecated.} =
-  ## create a new lightweight tag in the repository
-  result = tagCreateLightweight(repo, target, name, force = force)
 
 proc tagCreateLightweight*(target: GitThing; name: string;
                            force = false): GitResult[GitOid] =
