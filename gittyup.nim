@@ -1340,6 +1340,9 @@ iterator revWalk*(repo: GitRepository; walker: GitRevWalker;
         code = git_commit_lookup(addr commit, repo, oid).grc
       case code:
       of grcOk:
+        assert commit != nil
+        defer:
+          free commit
         # a successful lookup; yield a new thing using the commit
         let
           dupe = commit.copy
