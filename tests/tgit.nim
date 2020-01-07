@@ -36,9 +36,9 @@ suite "gittyup":
     #check false
 
   teardown:
+    free repo
     check shutdown()
     tmpdir.cleanup
-    free repo
 
   test "zero errors":
     when defined(posix):
