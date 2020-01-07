@@ -496,7 +496,7 @@ proc free*[T: GitHeapGits](point: ptr T) =
       warn "attempt to free nil git heap object"
     else:
       when defined(debugGit):
-        echo "freeeing git"
+        echo "\t~> freeing git", typeof(point)
       when T is git_repository:
         git_repository_free(point)
       elif T is git_reference:
@@ -539,7 +539,7 @@ proc free*[T: GitHeapGits](point: ptr T) =
 proc free*[T: NimHeapGits](point: ptr T) =
   if point != nil:
     when defined(debugGit):
-      echo "freeeing nim", $point
+      echo "\t~> freeing nim", typeof(point)
     dealloc(point)
   else:
     warn "attempt to free nil nim heap git object"
@@ -644,6 +644,7 @@ func `$`*(tag: GitTag): string =
     result = $name
 
 proc oid*(entry: GitTreeEntry): GitOid =
+  assert entry != nil
   result = git_tree_entry_id(entry)
 
 proc oid*(got: GitReference): GitOid =
@@ -707,6 +708,7 @@ proc owner*(reference: GitReference): GitRepository =
   result = git_reference_owner(reference)
 
 proc flags*(status: GitStatus): set[GitStatusFlag] =
+  assert status != nil
   ## produce the set of flags indicating the status of the file
   for flag in GitStatusFlag.low .. GitStatusFlag.high:
     if flag.ord.uint == bitand(status.status.uint, flag.ord.uint):
