@@ -1427,12 +1427,15 @@ proc zeroParentsMatch(commit: GitCommit; ps: GitPathSpec): GitResult[bool] =
 
 proc parentsMatch(commit: GitCommit; options: ptr git_diff_options;
                   ps: GitPathSpec): GitResult[bool] =
-    let
-      parents: cuint = git_commit_parentcount(commit)
-    if parents == 0.cuint:
-      result = commit.zeroParentsMatch(ps)
-    else:
-      result = commit.allParentsMatch(options, parents)
+  assert commit != nil
+  assert options != nil
+  assert ps != nil
+  let
+    parents: cuint = git_commit_parentcount(commit)
+  if parents == 0.cuint:
+    result = commit.zeroParentsMatch(ps)
+  else:
+    result = commit.allParentsMatch(options, parents)
 
 iterator commitsForSpec*(repo: GitRepository;
                          spec: openArray[string]): GitResult[GitThing] =
