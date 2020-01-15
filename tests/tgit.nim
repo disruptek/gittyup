@@ -13,7 +13,7 @@ const
   walking = true
   v1 = "555d5d803f1c63f3fad296ba844cd6f718861d0e"
   v102 = "372deb094fb11e56171e5c9785bd316577724f2e"
-  v218 = "a7f8eb0420606f2996dfcd149503497bbeb9ff66"
+  v218 = "c245dde54a6ae6a35a914337e7303769af121f01"
   cloneme = parseURI"https://github.com/disruptek/gittyup"
 
 template cleanup(directory: string) =
