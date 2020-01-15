@@ -60,8 +60,8 @@ suite "gittyup":
         oid = head.oid
       check $oid != ""
 
-    test "get a thing for 1.0.0":
-      thing := repo.lookupThing("1.0.0"):
+    test "get a thing for 2.1.8":
+      thing := repo.lookupThing("2.1.8"):
         checkpoint code.dumpError
         check false
       check $thing.oid == v1
