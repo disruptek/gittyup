@@ -298,19 +298,20 @@ type
 
   GitObjectKind* = enum
     # we have to add 2 here to satisfy nim; discriminants.low must be zero
-    goAny         = (2 + GIT_OBJECT_ANY, "object")
-    goInvalid     = (2 + GIT_OBJECT_INVALID, "invalid")
+    goAny         = (2 + GIT_OBJECT_ANY, "object")        # -2
+    goInvalid     = (2 + GIT_OBJECT_INVALID, "invalid")   # -1
     # this space intentionally left blank
-    goCommit      = (2 + GIT_OBJECT_COMMIT, "commit")
-    goTree        = (2 + GIT_OBJECT_TREE, "tree")
-    goBlob        = (2 + GIT_OBJECT_BLOB, "blob")
-    goTag         = (2 + GIT_OBJECT_TAG, "tag")
+    goCommit      = (2 + GIT_OBJECT_COMMIT, "commit")     #  1
+    goTree        = (2 + GIT_OBJECT_TREE, "tree")         #  2
+    goBlob        = (2 + GIT_OBJECT_BLOB, "blob")         #  3
+    goTag         = (2 + GIT_OBJECT_TAG, "tag")           #  4
     # this space intentionally left blank
-    goOfsDelta    = (2 + GIT_OBJECT_OFS_DELTA, "ofs")
-    goRefDelta    = (2 + GIT_OBJECT_REF_DELTA, "ref")
+    goOfsDelta    = (2 + GIT_OBJECT_OFS_DELTA, "ofs")     #  6
+    goRefDelta    = (2 + GIT_OBJECT_REF_DELTA, "ref")     #  7
 
   GitThing* = ref object
     o*: GitObject
+    # we really don't have anything else to say about these just yet
     case kind*: GitObjectKind:
     of goTag:
       discard
@@ -321,6 +322,7 @@ type
     else:
       discard
 
+  # if it's on this list, the semantics should be pretty consistent
   GitBuf* = ptr git_buf
   GitDiff* = ptr git_diff
   GitPathSpec* = ptr git_pathspec
@@ -344,10 +346,12 @@ type
   GitTagTable* = OrderedTableRef[string, GitThing]
   GitResult*[T] = Result[T, GitResultCode]
 
+# these just cast some cints into appropriate enums
 template grc(code: cint): GitResultCode = cast[GitResultCode](code.ord)
 template grc(code: GitResultCode): GitResultCode = code
 template gec(code: cint): GitErrorClass = cast[GitErrorClass](code.ord)
 
+# can't remember why we need this, but i'm curious.  let me know.
 proc hash*(gcs: GitCheckoutStrategy): Hash = gcs.ord.hash
 
 const
@@ -389,31 +393,32 @@ template dumpError() =
   if emsg != "":
     error emsg
 
-template gitFail*(allocd: typed; code: GitResultCode; body: untyped) =
-  ## a version of gitTrap that expects failure; no error messages!
-  defer:
-    if code == grcOk:
-      free(allocd)
-  if code != grcOk:
-    body
-
 template gitFail*(code: GitResultCode; body: untyped) =
   ## a version of gitTrap that expects failure; no error messages!
   if code != grcOk:
     body
 
-template gitTrap*(allocd: typed; code: GitResultCode; body: untyped) =
+template gitFail*(allocd: typed; code: GitResultCode; body: untyped) =
+  ## a version of gitTrap that expects failure; no error messages!
   defer:
     if code == grcOk:
       free(allocd)
+  gitFail(code, body)
+
+template gitTrap*(code: GitResultCode; body: untyped) =
+  ## trap an api result code, dump it via logging,
+  ## run the body as an error handler
   if code != grcOk:
     dumpError()
     body
 
-template gitTrap*(code: GitResultCode; body: untyped) =
-  if code != grcOk:
-    dumpError()
-    body
+template gitTrap*(allocd: typed; code: GitResultCode; body: untyped) =
+  ## trap an api result code, dump it via logging,
+  ## run the body as an error handler
+  defer:
+    if code == grcOk:
+      free(allocd)
+  gitTrap(code, body)
 
 # set a result variable `self` to value/error
 template ok*[T](self: var Result[T, GitResultCode]; x: T): auto =
@@ -423,8 +428,10 @@ template err*[T](self: var Result[T, GitResultCode]; x: GitResultCode): auto =
 
 # create a new result (eg. for an iterator)
 template ok*[T](x: T): auto =
-  results.ok(Result[T, GitResultCode], x)
+  #results.ok(Result[T, GitResultCode], x)
+  results.ok(GitResult[T], x)
 template err*[T](x: GitResultCode): auto =
+  #results.err(Result[T, GitResultCode], x)
   results.err(Result[T, GitResultCode], x)
 
 template `:=`*[T](v: untyped{nkIdent}; vv: Result[T, GitResultCode];
@@ -433,12 +440,14 @@ template `:=`*[T](v: untyped{nkIdent}; vv: Result[T, GitResultCode];
   template v: auto {.used.} = unsafeGet(vr)
   defer:
     if isOk(vr):
+      when defined(debugGit):
+        echo "auto-free of ", typeof(unsafeGet(vr))
       free(unsafeGet(vr))
   if not isOk(vr):
     var code {.used, inject.} = vr.error
-    when defined(debugGit):
-      debug "failure ", $v, ": ", $code
-      echo "failure ", $v, ": ", $code
+#    when defined(debugGit):
+#      debug "failure ", $v, ": ", $code
+#      echo "failure ", $v, ": ", $code
     body
 
 proc normalizeUrl(uri: Uri): Uri =
@@ -452,16 +461,25 @@ proc normalizeUrl(uri: Uri): Uri =
 proc init*(): bool =
   when defined(gitShutsDown):
     result = git_libgit2_init() > 0
+    when defined(debugGit):
+      debug "git init"
+      echo "git init"
   else:
     block:
       once:
         result = git_libgit2_init() > 0
+        when defined(debugGit):
+          debug "git init"
+          echo "git init"
         break
       result = true
 
 proc shutdown*(): bool =
   when defined(gitShutsDown):
     result = git_libgit2_shutdown() >= 0
+    when defined(debugGit):
+      debug "git shut"
+      echo "git shut"
   else:
     result = true
 
@@ -532,16 +550,20 @@ proc free*[T: GitHeapGits](point: ptr T) =
         git_signature_free(point)
       else:
         {.error: "missing a free definition for " & $typeof(T).}
+      when defined(debugGit):
+        echo "\t~> freed   git", typeof(point)
 
 proc free*[T: NimHeapGits](point: ptr T) =
   if point != nil:
     when defined(debugGit):
       echo "\t~> freeing nim", typeof(point)
     dealloc(point)
+    when defined(debugGit):
+      echo "\t~> freed   nim", typeof(point)
   else:
     warn "attempt to free nil nim heap git object"
 
-proc free*(thing: sink GitThing) =
+proc free*(thing: GitThing) =
   assert thing != nil
   withGit:
     case thing.kind:
@@ -553,28 +575,40 @@ proc free*(thing: sink GitThing) =
       free(cast[GitTag](thing.o))
     of {goAny, goInvalid, goBlob, goOfsDelta, goRefDelta}:
       free(cast[GitObject](thing.o))
-    disarm thing
+    #disarm thing
 
-proc free*(entries: sink GitTreeEntries) =
+proc free*(entries: GitTreeEntries) =
   withGit:
     for entry in entries.items:
       free(entry)
 
-proc copy*(commit: GitCommit): GitResult[GitCommit] =
-  ## create a copy of the commit; free it with free
-  assert commit != nil
-  var
-    dupe: GitCommit
-  withResultOf git_commit_dup(addr dupe, commit):
-    assert dupe != nil
-    result.ok dupe
+func kind(obj: GitObject): GitObjectKind =
+  ## fetch the GitObjectKind of a git object
+  assert obj != nil
+  assert GitObjectKind.high == goRefDelta
+  let
+    kind = git_object_type(obj)
+    offset = kind + GitObjectKind.high.ord - GIT_OBJECT_REF_DELTA
+  if offset in GitObjectKind.low.ord .. GitObjectKind.high.ord:
+    result = offset.GitObjectKind
+  else:
+    result = goInvalid
 
-proc copy*(oid: GitOid): GitOid =
-  ## create a copy of the oid; free it with dealloc
-  assert oid != nil
-  result = cast[GitOid](sizeof(git_oid).alloc)
-  git_oid_cpy(result, oid)
-  assert result != nil
+proc newThing(obj: GitObject | GitCommit | GitTag): GitThing =
+  ## turn a git object into a thing
+  assert obj != nil
+  try:
+    result = GitThing(kind: cast[GitObject](obj).kind, o: cast[GitObject](obj))
+  except:
+    result = GitThing(kind: goAny, o: cast[GitObject](obj))
+
+proc newThing(thing: GitThing): GitThing =
+  ## turning a thing into a thing involves no change
+  when false:
+    # crash
+    result = thing
+  else:
+    result = newThing(thing.o)
 
 proc short*(oid: GitOid; size: int): string =
   ## shorten an oid to a string of the given length
@@ -594,6 +628,35 @@ proc url*(remote: GitRemote): Uri =
   withGit:
     result = parseUri($git_remote_url(remote)).normalizeUrl
 
+proc oid*(entry: GitTreeEntry): GitOid =
+  assert entry != nil
+  result = git_tree_entry_id(entry)
+  assert result != nil
+
+proc oid*(got: GitReference): GitOid =
+  assert got != nil
+  result = git_reference_target(got)
+  assert result != nil
+
+proc oid*(obj: GitObject): GitOid =
+  assert obj != nil
+  result = git_object_id(obj)
+  assert result != nil
+
+proc oid*(thing: GitThing): GitOid =
+  assert thing != nil and thing.o != nil
+  result = thing.o.oid
+  assert result != nil
+
+proc oid*(tag: GitTag): GitOid =
+  assert tag != nil
+  result = git_tag_id(tag)
+  assert result != nil
+
+func name*(got: GitReference): string =
+  assert got != nil
+  result = $git_reference_name(got)
+
 func name*(entry: GitTreeEntry): string =
   assert entry != nil
   result = $git_tree_entry_name(entry)
@@ -601,6 +664,17 @@ func name*(entry: GitTreeEntry): string =
 func name*(remote: GitRemote): string =
   assert remote != nil
   result = $git_remote_name(remote)
+
+func isTag*(got: GitReference): bool =
+  assert got != nil
+  result = git_reference_is_tag(got) == 1
+
+proc flags*(status: GitStatus): set[GitStatusFlag] =
+  assert status != nil
+  ## produce the set of flags indicating the status of the file
+  for flag in GitStatusFlag.low .. GitStatusFlag.high:
+    if flag.ord.uint == bitand(status.status.uint, flag.ord.uint):
+      result.incl flag
 
 func `$`*(tags: GitTagTable): string =
   assert tags != nil
@@ -641,89 +715,6 @@ func `$`*(tag: GitTag): string =
   if name != nil:
     result = $name
 
-proc oid*(entry: GitTreeEntry): GitOid =
-  assert entry != nil
-  result = git_tree_entry_id(entry)
-  assert result != nil
-
-proc oid*(got: GitReference): GitOid =
-  assert got != nil
-  result = git_reference_target(got)
-  assert result != nil
-
-proc oid*(obj: GitObject): GitOid =
-  assert obj != nil
-  result = git_object_id(obj)
-  assert result != nil
-
-proc oid*(thing: GitThing): GitOid =
-  assert thing != nil and thing.o != nil
-  result = thing.o.oid
-  assert result != nil
-
-proc oid*(tag: GitTag): GitOid =
-  assert tag != nil
-  result = git_tag_id(tag)
-  assert result != nil
-
-proc branchName*(got: GitReference): string =
-  ## fetch a branch name assuming the reference is a branch
-  assert got != nil
-  withGit:
-    # we're going to assume that the reference name is
-    # no longer than the branch_name; we're using this
-    # assumption to create a name: cstring of the right
-    # size so we can branc_name into it safely...
-    var
-      name = git_reference_name(got)
-    block:
-      gitTrap git_branch_name(addr name, got).grc:
-        dumpError()
-        break
-      result = $name
-
-func isTag*(got: GitReference): bool =
-  assert got != nil
-  result = git_reference_is_tag(got) == 1
-
-proc isBranch*(got: GitReference): bool =
-  assert got != nil
-  withGit:
-    result = git_reference_is_branch(got) == 1
-
-func name*(got: GitReference): string =
-  assert got != nil
-  result = $git_reference_name(got)
-
-proc owner*(thing: GitThing): GitRepository =
-  ## retrieve the repository that owns this thing
-  assert thing != nil and thing.o != nil
-  result = git_object_owner(thing.o)
-  assert result != nil
-
-proc owner*(commit: GitCommit): GitRepository =
-  ## retrieve the repository that owns this commit
-  assert commit != nil
-  result = git_commit_owner(commit)
-  assert result != nil
-
-proc owner*(reference: GitReference): GitRepository =
-  ## retrieve the repository that owns this reference
-  assert reference != nil
-  result = git_reference_owner(reference)
-  assert result != nil
-
-proc flags*(status: GitStatus): set[GitStatusFlag] =
-  assert status != nil
-  ## produce the set of flags indicating the status of the file
-  for flag in GitStatusFlag.low .. GitStatusFlag.high:
-    if flag.ord.uint == bitand(status.status.uint, flag.ord.uint):
-      result.incl flag
-
-proc setFlags[T](flags: seq[T] | set[T] | HashSet[T]): cuint =
-  for flag in flags.items:
-    result = bitor(result, flag.ord.cuint).cuint
-
 func `$`*(reference: GitReference): string =
   assert reference != nil
   if reference.isTag:
@@ -734,18 +725,6 @@ func `$`*(reference: GitReference): string =
 func `$`*(entry: GitTreeEntry): string =
   assert entry != nil
   result = entry.name
-
-func kind(obj: GitObject): GitObjectKind =
-  ## fetch the GitObjectKind of a git object
-  assert obj != nil
-  assert GitObjectKind.high == goRefDelta
-  let
-    kind = git_object_type(obj)
-    offset = kind + GitObjectKind.high.ord - GIT_OBJECT_REF_DELTA
-  if offset in GitObjectKind.low.ord .. GitObjectKind.high.ord:
-    result = offset.GitObjectKind
-  else:
-    result = goInvalid
 
 func `$`*(obj: GitObject): string =
   ## string representation of git object
@@ -772,6 +751,90 @@ func `$`*(status: GitStatus): string =
     if result != "":
       result &= ","
     result &= $flag
+
+proc copy*(commit: GitCommit): GitResult[GitCommit] =
+  ## create a copy of the commit; free it with free
+  assert commit != nil
+  var
+    dupe: GitCommit
+  withResultOf git_commit_dup(addr dupe, commit):
+    assert dupe != nil
+    result.ok dupe
+  echo result.get
+
+proc copy*(thing: GitThing): GitResult[GitThing] =
+  ## create a copy of the thing; free it with free
+  assert thing != nil and thing.o != nil
+  case thing.kind:
+  of goInvalid:
+    result.err grcInvalid
+  of goCommit:
+    var
+      dupe: GitCommit
+    withResultOf git_commit_dup(addr dupe, cast[GitCommit](thing.o)):
+      {.warning: "FIXME: just another marker".}
+      #result.err grcUser
+      result.ok newThing(dupe)
+  of goTag:
+    var
+      dupe: GitTag
+    withResultOf git_tag_dup(addr dupe, cast[GitTag](thing.o)):
+      result.ok newThing(dupe)
+  else:
+    var
+      dupe: GitObject
+    withResultOf git_object_dup(addr dupe, cast[GitObject](thing.o)):
+      result.ok newThing(dupe)
+
+proc copy*(oid: GitOid): GitOid =
+  ## create a copy of the oid; free it with dealloc
+  assert oid != nil
+  result = cast[GitOid](sizeof(git_oid).alloc)
+  git_oid_cpy(result, oid)
+  assert result != nil
+
+proc branchName*(got: GitReference): string =
+  ## fetch a branch name assuming the reference is a branch
+  assert got != nil
+  withGit:
+    # we're going to assume that the reference name is
+    # no longer than the branch_name; we're using this
+    # assumption to create a name: cstring of the right
+    # size so we can branc_name into it safely...
+    var
+      name = git_reference_name(got)
+    block:
+      gitTrap git_branch_name(addr name, got).grc:
+        dumpError()
+        break
+      result = $name
+
+proc isBranch*(got: GitReference): bool =
+  assert got != nil
+  withGit:
+    result = git_reference_is_branch(got) == 1
+
+proc owner*(thing: GitThing): GitRepository =
+  ## retrieve the repository that owns this thing
+  assert thing != nil and thing.o != nil
+  result = git_object_owner(thing.o)
+  assert result != nil
+
+proc owner*(commit: GitCommit): GitRepository =
+  ## retrieve the repository that owns this commit
+  assert commit != nil
+  result = git_commit_owner(commit)
+  assert result != nil
+
+proc owner*(reference: GitReference): GitRepository =
+  ## retrieve the repository that owns this reference
+  assert reference != nil
+  result = git_reference_owner(reference)
+  assert result != nil
+
+proc setFlags[T](flags: seq[T] | set[T] | HashSet[T]): cuint =
+  for flag in flags.items:
+    result = bitor(result, flag.ord.cuint).cuint
 
 proc message*(commit: GitCommit): string =
   assert commit != nil
@@ -810,7 +873,7 @@ proc summary*(thing: GitThing): string =
     raise newException(ValueError, "dunno how to get a summary: " & $thing)
   result = result.strip
 
-proc free*(table: sink GitTagTable) =
+proc free*(table: GitTagTable) =
   ## free a tag table
   assert table != nil
   withGit:
@@ -840,7 +903,7 @@ proc free*(table: sink GitTagTable) =
       t.clear
     else:
       table.clear
-    disarm table
+    #disarm table
 
 proc hash*(oid: GitOid): Hash =
   assert oid != nil
@@ -877,14 +940,6 @@ proc author*(thing: GitThing): GitSignature =
   assert thing != nil and thing.kind == goCommit
   result = git_commit_author(cast[GitCommit](thing.o))
   assert result != nil
-
-proc newThing(obj: GitObject | GitCommit | GitTag): GitThing =
-  ## wrap a git object as a thing
-  assert obj != nil
-  try:
-    result = GitThing(kind: cast[GitObject](obj).kind, o: cast[GitObject](obj))
-  except:
-    result = GitThing(kind: goAny, o: cast[GitObject](obj))
 
 proc clone*(uri: Uri; path: string; branch = ""): GitResult[GitRepository] =
   ## clone a repository
@@ -1028,7 +1083,7 @@ proc newTagTable*(size = 32): GitTagTable =
   result = newOrderedTable[string, GitThing](size)
 
 proc addTag(tags: var GitTagTable; name: string;
-            thing: sink GitThing): GitResultCode =
+            thing: GitThing): GitResultCode =
   ## add a thing to the tag table, perhaps peeling it first
   # if it's not a tag, just add it to the table and move on
   if thing.kind != goTag:
@@ -1122,7 +1177,7 @@ when hasWorkingStatus == true:
           code = git_status_options_init(options, GIT_STATUS_OPTIONS_VERSION).grc
         if code != grcOk:
           # throw the error code
-          yield err[GitStatus](code)
+          yield Result[GitStatus, GitResultCode].err(code)
           break
 
         # add the options specified by the user
@@ -1136,7 +1191,7 @@ when hasWorkingStatus == true:
         code = git_status_list_new(addr statum, repository, options).grc
         if code != grcOk:
           # throw the error code
-          yield err[GitStatus](code)
+          yield Result[GitStatus, GitResultCode].err(code)
           break
         # remember to free it
         defer:
@@ -1145,7 +1200,8 @@ when hasWorkingStatus == true:
         # iterate over the status list by entry index
         for index in 0 ..< git_status_list_entrycount(statum):
           # and yield a status object result per each
-          yield ok[GitStatus](git_status_byindex(statum, index.cuint))
+          yield Result[GitStatus, GitResultCode].ok git_status_byindex(statum, index.cuint)
+          #yield ok[GitStatus](git_status_byindex(statum, index.cuint))
 
 else:
   iterator status*(repository: GitRepository; show: GitStatusShow;
@@ -1314,7 +1370,7 @@ proc newRevWalk*(repo: GitRepository): GitResult[GitRevWalker] =
       result.ok walker
 
 proc next*(walker: GitRevWalker): GitResult[GitOid] =
-  ## walk to the next node
+  ## try to get the next oid that we should walk to
   withGit:
     block:
       var
@@ -1327,66 +1383,70 @@ proc next*(walker: GitRevWalker): GitResult[GitOid] =
       free oid
 
 proc push*(walker: GitRevWalker; oid: GitOid): GitResultCode =
-  ## add a tree to be walked
-  withGit:
-    result = git_revwalk_push(walker, oid).grc
-
-iterator revWalk*(repo: GitRepository; walker: GitRevWalker;
-                  start: sink GitOid): GitResult[GitThing] =
-  ## sic the walker on a repo starting with the given oid
+  ## add a starting oid for the walker to begin at
   withGit:
     var
-      oid = start
-
-    while true:
-      var
-        commit: GitCommit
-      # lookup the next commit using the current oid
-      let
-        code = git_commit_lookup(addr commit, repo, oid).grc
-      case code:
-      of grcOk:
-        assert commit != nil
-        defer:
-          free commit
-        # a successful lookup; yield a new thing using the commit
-        let
-          dupe = commit.copy
-        if dupe.isErr:
-          yield err[GitThing](dupe.error)
-          break
-        yield ok[GitThing](newThing(dupe.get))
-      of grcNotFound:
-        # not found; we're done the walk
-        break
-      else:
-        # undefined error; emit it as such
-        yield err[GitThing](code)
-
-      # now we need to fetch the next oid in the walk
-      var
-        future = walker.next
-
-      # skip the oid if it matches the one we started with
-      if future.isOk and future.get == start:
-        free future.get
-        future = walker.next
-
-      if future.isOk:
-        # the future oid was retrieved successfully, so
-        # we free the previous oid and assign the new one
-        free oid
-        oid = future.get
-      else:
-        # if we didn't reach the end of iteration,
-        if future.error != grcIterOver:
-          # emit the error
-          yield err[GitThing](future.error)
-        # and then end our walk
-        break
-
-    # free whatever oid we still have
+      pushee = copy(oid)
+    result = git_revwalk_push(walker, pushee).grc
     free oid
+
+proc lookupCommit*(repo: GitRepository; oid: GitOid): GitResult[GitThing] =
+  ## try to look a commit up in the repository with the given name
+  withGit:
+    var
+      commit: GitCommit
+    withResultOf git_commit_lookup(addr commit, repo, oid):
+      assert commit != nil
+      result.ok newThing(commit)
+
+iterator revWalk*(repo: GitRepository; walker: GitRevWalker): GitResult[GitThing] =
+  ## sic the walker on a repo starting with the given oid
+  withGit:
+    block:
+      var
+        future = walker.next
+        oid: GitOid
+
+      # if oid won't be populated, we'll break here
+      # so we don't end up trying to free it below
+      if future.isErr:
+        if future.error != grcNotFound:
+          yield err[GitThing](future.error)
+        break
+
+      try:
+        while future.isOk:
+          # the future holds the next step in the walk
+          oid = future.get
+
+          # lookup the next commit using the current oid
+          commit := repo.lookupCommit(oid):
+            if code != grcNotFound:
+              # undefined error; emit it as such
+              yield err[GitThing](code)
+            # and then break iteration
+            break
+
+          # a successful lookup; yield a new thing using the commit
+          block duping:
+            dupe := copy(commit):
+              yield err[GitThing](code)
+              break duping
+            yield Result[GitThing, GitResultCode].ok(dupe)
+
+          disarm oid
+          free oid
+          oid = nil
+          future = walker.next
+          if future.isErr:
+            # if we didn't reach the end of iteration,
+            if future.error notin {grcIterOver, grcNotFound}:
+              # emit the error
+              yield err[GitThing](future.error)
+
+      finally:
+        # finally free oid
+        free oid
 
 proc newPathSpec*(spec: openArray[string]): GitResult[GitPathSpec] =
   ## instantiate a new path spec from a strarray
@@ -1548,23 +1608,26 @@ iterator commitsForSpec*(repo: GitRepository;
 
       # iterate over ALL the commits
       # pass a copy of the head oid so revwalk can free it
-      for rev in repo.revWalk(walker, head.copy):
+      for rev in repo.revWalk(walker):
         # if there's an error, yield it
         if rev.isErr:
-          yield rev
+          #yield ok[GitThing](rev.get)  # gratuitous Result wrap
+          yield Result[GitThing, GitResultCode].ok rev.get  # gratuitous Result wrap
           break master
         else:
           let
             matched = rev.get.commit.parentsMatch(options, ps)
           if matched.isOk and matched.get:
             # all the parents matched, so yield this revision
-            yield rev
+            #yield ok[GitThing](rev.get)  # gratuitous Result wrap
+            yield Result[GitThing, GitResultCode].ok rev.get  # gratuitous Result wrap
           else:
             # we're not going to emit this revision, so free it
             free rev.get
             if matched.isErr:
               # the matching process produced an error
-              yield err[GitThing](matched.error)
+              #yield err[GitThing](matched.error)
+              yield Result[GitThing, GitResultCode].err matched.error
               break master
 
 proc tagCreateLightweight*(repo: GitRepository; target: GitThing;
@@ -1650,7 +1713,8 @@ iterator branches*(repo: GitRepository;
       # if we couldn't create the iterator,
       if code != grcOk:
         # then emit the error and bail
-        yield err[GitReference](code)
+        #yield err[GitReference](code)
+        yield Result[GitReference, GitResultCode].err code
         break iteration
       defer:
         iter.free
@@ -1665,7 +1729,8 @@ iterator branches*(repo: GitRepository;
         of grcOk:
           assert branch != nil
           # issue a branch result
-          yield ok(branch)
+          #yield ok(branch)
+          yield Result[GitReference, GitResultCode].ok branch
         of grcIterOver:
           assert branch == nil
           # or end iteration normally
@@ -1673,7 +1738,8 @@ iterator branches*(repo: GitRepository;
         else:
           assert branch == nil
           # or end iteration with an error emission
-          yield err[GitReference](code)
+          #yield err[GitReference](code)
+          yield Result[GitReference, GitResultCode].err code
           break iteration
     # now, look, i tol' you it was gonna get weird; it's
     # your own fault you weren't paying attention

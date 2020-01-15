@@ -7,9 +7,10 @@ import std/unittest
 import gittyup
 
 const
-  tagging = true
-  tagtable = true
-  specing = true
+  tagging = false
+  tagtable = false
+  specing = false
+  walking = true
   v1 = "555d5d803f1c63f3fad296ba844cd6f718861d0e"
   v102 = "372deb094fb11e56171e5c9785bd316577724f2e"
   cloneme = parseURI"https://github.com/disruptek/gittyup"
@@ -40,42 +41,43 @@ suite "gittyup":
     check shutdown()
     tmpdir.cleanup
 
-  test "zero errors":
-    when defined(posix):
-      check grcOk.dumpError == ""
-    else:
-      # windows apparently errors on missing .gitconfig
-      check true
+  when true:
+    test "zero errors":
+      when defined(posix):
+        check grcOk.dumpError == ""
+      else:
+        # windows apparently errors on missing .gitconfig
+        check true
 
-  test "repo state":
-    check repo.repositoryState == grsNone
+    test "repo state":
+      check repo.repositoryState == grsNone
 
-  test "get the head":
-    head := repo.repositoryHead:
-      checkpoint code.dumpError
-      check false
-    let
-      oid = head.oid
-    check $oid != ""
+    test "get the head":
+      head := repo.repositoryHead:
+        checkpoint code.dumpError
+        check false
+      let
+        oid = head.oid
+      check $oid != ""
 
-  test "get a thing for 1.0.0":
-    thing := repo.lookupThing("1.0.0"):
-      checkpoint code.dumpError
-      check false
-    check $thing.oid == v1
+    test "get a thing for 1.0.0":
+      thing := repo.lookupThing("1.0.0"):
+        checkpoint code.dumpError
+        check false
+      check $thing.oid == v1
 
-  test "remote lookup":
-    origin := repo.remoteLookup("origin"):
-      checkpoint code.dumpError
-      check false
-    check "gittyup" in origin.url.path
+    test "remote lookup":
+      origin := repo.remoteLookup("origin"):
+        checkpoint code.dumpError
+        check false
+      check "gittyup" in origin.url.path
 
-  test "clone something":
-    # clone ourselves into tmpdir
-    cloned := cloneme.clone(tmpdir):
-      checkpoint code.dumpError
-      check false
-    check grsNone == cloned.repositoryState
+    test "clone something":
+      # clone ourselves into tmpdir
+      cloned := cloneme.clone(tmpdir):
+        checkpoint code.dumpError
+        check false
+      check grsNone == cloned.repositoryState
 
   when tagging:
     test "create and delete a tag":
@@ -101,6 +103,37 @@ suite "gittyup":
           check repo.tagDelete("test") == grcOk
         check $tags["1.0.2"].oid == v102
 
+  when walking:
+    test "revision walk":
+      block walking:
+        # clone ourselves into tmpdir
+        cloned := cloneme.clone(tmpdir):
+          checkpoint code.dumpError
+          check false
+        check grsNone == cloned.repositoryState
+
+        # we'll need a walker, and we'll want it freed
+        walker := cloned.newRevWalk:
+          checkpoint code.dumpError
+          check false
+          break walking
+
+        # find the head
+        head := cloned.getHeadOid:
+          checkpoint code.dumpError
+          check false
+          break walking
+
+        # start at the head
+        gitTrap walker.push(head.copy):
+          check false
+          break walking
+
+        for rev in cloned.revWalk(walker):
+          check rev.isOk
+          #echo rev.get
+          #free rev.get
+
   when specing:
     test "commits for spec":
       # clone ourselves into tmpdir
@@ -115,22 +148,18 @@ suite "gittyup":
           things: seq[GitThing] = @[]
         proc dump(things: var seq[GitThing]): string =
           for n in things.items:
-            result &= $n & "\n"
+            if n != nil:
+              result &= $n & "\n"
         for thing in cloned.commitsForSpec(@[dotnimble]):
           echo "thing arrived"
           check thing.isOk
           if thing.isOk:
             echo "adding...", thing.get
-            when specing:
-              things.add thing.get
-              echo "added; now have ", things.len, " things: ", thing.get
-              echo things.dump
-        when specing:
-          echo "NOW WE FREE"
-          check things.len > 10
-          block found:
-            for thing in things.items:
-              if $thing.oid == v102:
-                break found
-              free thing
-            check false
+            things.add thing.get
+        check things.len > 10
+        block found:
+          for thing in things.items:
+            if $thing.oid == v102:
+              break found
+            free thing
+          check false
