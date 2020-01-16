@@ -508,7 +508,8 @@ template withResultOf(gitsaid: cint | GitResultCode; body: untyped) =
 proc free*[T: GitHeapGits](point: ptr T) =
   withGit:
     if point == nil:
-      warn "attempt to free nil git heap object"
+      when not defined(release) and not defined(danger):
+        raise newException(Defect, "attempt to free nil git heap object")
     else:
       when defined(debugGit):
         echo "\t~> freeing git", typeof(point)
@@ -554,14 +555,15 @@ proc free*[T: GitHeapGits](point: ptr T) =
         echo "\t~> freed   git", typeof(point)
 
 proc free*[T: NimHeapGits](point: ptr T) =
-  if point != nil:
+  if point == nil:
+    when not defined(release) and not defined(danger):
+      raise newException(Defect, "attempt to free nil nim heap git object")
+  else:
     when defined(debugGit):
       echo "\t~> freeing nim", typeof(point)
     dealloc(point)
     when defined(debugGit):
       echo "\t~> freed   nim", typeof(point)
-  else:
-    warn "attempt to free nil nim heap git object"
 
 proc free*(thing: GitThing) =
   assert thing != nil
@@ -1434,9 +1436,7 @@ iterator revWalk*(repo: GitRepository; walker: GitRevWalker): GitResult[GitThing
               break duping
             yield Result[GitThing, GitResultCode].ok(dupe)
 
-          disarm oid
-          free oid
-          oid = nil
+          # fetch the next step in the walk
           future = walker.next
           if future.isErr:
             # if we didn't reach the end of iteration,
