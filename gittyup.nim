@@ -574,7 +574,7 @@ proc free*[T: NimHeapGits](point: ptr T) =
     when defined(debugGit):
       echo "\t~> freed   nim", typeof(point)
 
-proc free*(thing: sink var GitThing) =
+proc free*(thing: sink GitThing) =
   assert thing != nil
   withGit:
     case thing.kind:
@@ -588,7 +588,7 @@ proc free*(thing: sink var GitThing) =
       free(cast[GitObject](thing.o))
     #disarm thing
 
-proc free*(entries: sink var GitTreeEntries) =
+proc free*(entries: sink GitTreeEntries) =
   withGit:
     for entry in entries.items:
       free(entry)
@@ -884,7 +884,7 @@ proc summary*(thing: GitThing): string =
     raise newException(ValueError, "dunno how to get a summary: " & $thing)
   result = result.strip
 
-proc free*(table: GitTagTable) =
+proc free*(table: sink GitTagTable) =
   ## free a tag table
   assert table != nil
   withGit:
