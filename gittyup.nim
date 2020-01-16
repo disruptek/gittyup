@@ -17,14 +17,23 @@ const
 when git2SetVer == "master":
   const
     hasWorkingStatus* = true
+
+# solve a git_repository corruption issue
+elif git2SetVer == "05c1fb8a593c6aeb3869822ccc5cd551ba56d87f":
+  const
+    hasWorkingStatus* = true
+
 elif git2SetVer == "0.28.3" or git2SetVer == "0.28.4":
   const
     hasWorkingStatus* = false
 elif git2SetVer == "v0.28.3" or git2SetVer == "v0.28.4":
   const
     hasWorkingStatus* = false
-else:
+elif not defined(debugGit):
   {.fatal: "libgit2 version `" & git2SetVer & "` unsupported".}
+else:
+  const
+    hasWorkingStatus* = true
 
 import nimgit2
 import results
@@ -436,7 +445,7 @@ template err*[T](x: GitResultCode): auto =
 
 template `:=`*[T](v: untyped{nkIdent}; vv: Result[T, GitResultCode];
                   body: untyped): untyped =
-  let vr = vv
+  var vr = vv
   template v: auto {.used.} = unsafeGet(vr)
   defer:
     if isOk(vr):
@@ -565,7 +574,7 @@ proc free*[T: NimHeapGits](point: ptr T) =
     when defined(debugGit):
       echo "\t~> freed   nim", typeof(point)
 
-proc free*(thing: GitThing) =
+proc free*(thing: sink var GitThing) =
   assert thing != nil
   withGit:
     case thing.kind:
@@ -579,7 +588,7 @@ proc free*(thing: GitThing) =
       free(cast[GitObject](thing.o))
     #disarm thing
 
-proc free*(entries: GitTreeEntries) =
+proc free*(entries: sink var GitTreeEntries) =
   withGit:
     for entry in entries.items:
       free(entry)
@@ -1085,7 +1094,7 @@ proc newTagTable*(size = 32): GitTagTable =
   result = newOrderedTable[string, GitThing](size)
 
 proc addTag(tags: var GitTagTable; name: string;
-            thing: GitThing): GitResultCode =
+            thing: var GitThing): GitResultCode =
   ## add a thing to the tag table, perhaps peeling it first
   # if it's not a tag, just add it to the table and move on
   if thing.kind != goTag:
@@ -1122,7 +1131,7 @@ proc tagTable*(repo: GitRepository): GitResult[GitTagTable] =
 
     # iterate over all the names,
     for name in names.get.items:
-      let
+      var
         # try to lookup the name
         thing = repo.lookupThing(name)
       if thing.isErr:
@@ -1431,10 +1440,14 @@ iterator revWalk*(repo: GitRepository; walker: GitRevWalker): GitResult[GitThing
 
           # a successful lookup; yield a new thing using the commit
           block duping:
-            dupe := copy(commit):
-              yield err[GitThing](code)
+            # copy the commit so a consumer can do their own mm on it
+            var
+              dupe = copy(commit)
+            if dupe.isErr:
+              yield err[GitThing](dupe.error)
               break duping
-            yield Result[GitThing, GitResultCode].ok(dupe)
+            else:
+              yield Result[GitThing, GitResultCode].ok(dupe.get)
 
           # fetch the next step in the walk
           future = walker.next
@@ -1611,19 +1624,20 @@ iterator commitsForSpec*(repo: GitRepository;
       for rev in repo.revWalk(walker):
         # if there's an error, yield it
         if rev.isErr:
-          #yield ok[GitThing](rev.get)  # gratuitous Result wrap
-          yield Result[GitThing, GitResultCode].ok rev.get  # gratuitous Result wrap
+          #yield ok[GitThing](rev.get)
+          yield Result[GitThing, GitResultCode].ok rev.get
           break master
         else:
           let
             matched = rev.get.commit.parentsMatch(options, ps)
           if matched.isOk and matched.get:
             # all the parents matched, so yield this revision
-            #yield ok[GitThing](rev.get)  # gratuitous Result wrap
-            yield Result[GitThing, GitResultCode].ok rev.get  # gratuitous Result wrap
+            #yield ok[GitThing](rev.get)
+            yield Result[GitThing, GitResultCode].ok rev.get
           else:
             # we're not going to emit this revision, so free it
-            free rev.get
+            {.warning: "need var iteration".}
+            #free rev.get
             if matched.isErr:
               # the matching process produced an error
               #yield err[GitThing](matched.error)
