@@ -783,8 +783,6 @@ proc copy*(thing: GitThing): GitResult[GitThing] =
     var
       dupe: GitCommit
     withResultOf git_commit_dup(addr dupe, cast[GitCommit](thing.o)):
-      {.warning: "FIXME: just another marker".}
-      #result.err grcUser
       result.ok newThing(dupe)
   of goTag:
     var
