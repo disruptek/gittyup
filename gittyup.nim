@@ -621,7 +621,7 @@ proc newThing(thing: GitThing): GitThing =
   else:
     result = newThing(thing.o)
 
-proc short*(oid: GitOid; size: int): string =
+proc short*(oid: GitOid; size: int): GitResult[string] =
   ## shorten an oid to a string of the given length
   assert oid != nil
   var
@@ -629,8 +629,12 @@ proc short*(oid: GitOid; size: int): string =
   withGit:
     output = cast[cstring](alloc(size + 1))
     output[size] = '\0'
-    git_oid_nfmt(output, size.uint, oid)
-    result = $output
+    when git2SetVer == "master":
+      withResultOf git_oid_nfmt(output, size.uint, oid):
+        result.ok $output
+    else:
+      git_oid_nfmt(output, size.uint, oid)
+      result.ok $output
     dealloc output
 
 proc url*(remote: GitRemote): Uri =
@@ -795,12 +799,18 @@ proc copy*(thing: GitThing): GitResult[GitThing] =
     withResultOf git_object_dup(addr dupe, cast[GitObject](thing.o)):
       result.ok newThing(dupe)
 
-proc copy*(oid: GitOid): GitOid =
+proc copy*(oid: GitOid): GitResult[GitOid] =
   ## create a copy of the oid; free it with dealloc
   assert oid != nil
-  result = cast[GitOid](sizeof(git_oid).alloc)
-  git_oid_cpy(result, oid)
-  assert result != nil
+  var
+    copied = cast[GitOid](sizeof(git_oid).alloc)
+  when git2SetVer == "master":
+    withResultOf git_oid_cpy(copied, oid):
+      result.ok copied
+  else:
+    git_oid_cpy(copied, oid)
+    result.ok copied
+    assert copied != nil
 
 proc branchName*(got: GitReference): string =
   ## fetch a branch name assuming the reference is a branch
@@ -1164,7 +1174,7 @@ proc getHeadOid*(repo: GitRepository): GitResult[GitOid] =
         result.err code
         break
       # return a copy of the oid so we can free the head
-      result.ok head.oid.copy
+      result = head.oid.copy
 
 proc repositoryState*(repository: GitRepository): GitRepoState =
   ## fetch the state of a repository
@@ -1394,10 +1404,11 @@ proc next*(walker: GitRevWalker): GitResult[GitOid] =
 proc push*(walker: GitRevWalker; oid: GitOid): GitResultCode =
   ## add a starting oid for the walker to begin at
   withGit:
-    var
-      pushee = copy(oid)
-    result = git_revwalk_push(walker, pushee).grc
-    free oid
+    block:
+      pushee := copy(oid):
+        setResultAsError(result, code)
+        break
+      result = git_revwalk_push(walker, pushee).grc
 
 proc lookupCommit*(repo: GitRepository; oid: GitOid): GitResult[GitThing] =
   ## try to look a commit up in the repository with the given name
