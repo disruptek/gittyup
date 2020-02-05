@@ -126,7 +126,7 @@ suite "gittyup":
           break walking
 
         # start at the head
-        gitTrap walker.push(head.copy):
+        gitTrap walker.push(head):
           check false
           break walking
 
