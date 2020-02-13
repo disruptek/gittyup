@@ -13,27 +13,12 @@ import std/uri
 
 const
   git2SetVer {.strdefine, used.} = "master"
+  hasWorkingStatus* {.deprecated.} = true
 
 when git2SetVer == "master":
-  const
-    hasWorkingStatus* = true
-
-# solve a git_repository corruption issue
-elif git2SetVer == "05c1fb8a593c6aeb3869822ccc5cd551ba56d87f":
-  const
-    hasWorkingStatus* = true
-
-elif git2SetVer == "0.28.3" or git2SetVer == "0.28.4":
-  const
-    hasWorkingStatus* = false
-elif git2SetVer == "v0.28.3" or git2SetVer == "v0.28.4":
-  const
-    hasWorkingStatus* = false
+  discard
 elif not defined(debugGit):
   {.fatal: "libgit2 version `" & git2SetVer & "` unsupported".}
-else:
-  const
-    hasWorkingStatus* = true
 
 import nimgit2
 import results
