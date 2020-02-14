@@ -1,5 +1,9 @@
-# gittyup [![Build Status](https://travis-ci.org/disruptek/gittyup.svg?branch=master)](https://travis-ci.org/disruptek/gittyup)
+# gittyup
 higher-level git bindings that build upon nimgit2
+
+Build status:
+- `nim c`: [![Build Status](https://travis-ci.org/disruptek/gittyup.svg?branch=master)](https://travis-ci.org/disruptek/gittyup)
+- `nim cpp`: [![Build Status](https://travis-ci.org/disruptek/gittyup.svg?branch=cpp)](https://travis-ci.org/disruptek/gittyup)
 
 ## Usage
 Use one of these combinations of defines, in decreasing preference:
