@@ -593,10 +593,13 @@ func kind(obj: GitObject): GitObjectKind =
 proc newThing(obj: GitObject | GitCommit | GitTag): GitThing =
   ## turn a git object into a thing
   assert obj != nil
-  try:
+  when true:
     result = GitThing(kind: cast[GitObject](obj).kind, o: cast[GitObject](obj))
-  except:
-    result = GitThing(kind: goAny, o: cast[GitObject](obj))
+  else:
+    try:
+      result = GitThing(kind: cast[GitObject](obj).kind, o: cast[GitObject](obj))
+    except:
+      result = GitThing(kind: goAny, o: cast[GitObject](obj))
 
 proc newThing(thing: GitThing): GitThing =
   ## turning a thing into a thing involves no change
