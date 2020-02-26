@@ -21,8 +21,8 @@ elif not defined(debugGit):
   {.fatal: "libgit2 version `" & git2SetVer & "` unsupported".}
 
 import nimgit2
-import results
-export results
+import badresults
+export badresults
 
 # there are some name changes between the 0.28 and later versions
 when compiles(git_clone_init_options):
@@ -416,9 +416,9 @@ template gitTrap*(allocd: typed; code: GitResultCode; body: untyped) =
 
 # set a result variable `self` to value/error
 template ok*[T](self: var Result[T, GitResultCode]; x: T): auto =
-  results.ok(self.Result, x)
+  badresults.ok(self.Result, x)
 template err*[T](self: var Result[T, GitResultCode]; x: GitResultCode): auto =
-  results.err(self.Result, x)
+  badresults.err(self.Result, x)
 
 # create a new result (eg. for an iterator)
 template ok*[T](x: T): auto =
@@ -426,7 +426,7 @@ template ok*[T](x: T): auto =
   results.ok(GitResult[T], x)
 template err*[T](x: GitResultCode): auto =
   #results.err(Result[T, GitResultCode], x)
-  results.err(Result[T, GitResultCode], x)
+  badresults.err(Result[T, GitResultCode], x)
 
 template `:=`*[T](v: untyped{nkIdent}; vv: Result[T, GitResultCode];
                   body: untyped): untyped =
