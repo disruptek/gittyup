@@ -1,3 +1,4 @@
+import std/macros except error
 import std/math
 import std/times
 import std/logging
@@ -348,7 +349,12 @@ template gec(code: cint): GitErrorClass = cast[GitErrorClass](code.ord)
 # can't remember why we need this, but i'm curious.  let me know.
 proc hash*(gcs: GitCheckoutStrategy): Hash = gcs.ord.hash
 
+macro enumValues(e: typed): untyped =
+  newNimNode(nnkCurly).add(e.getType[1][1..^1])
+
 const
+  validGitStatusFlags = enumValues(GitStatusFlag)
+  validGitObjectKinds = enumValues(GitObjectKind)
   defaultCheckoutStrategy = [
     gcsSafe,
     gcsRecreateMissing,
@@ -581,13 +587,9 @@ proc free*(entries: sink GitTreeEntries) =
 func kind(obj: GitObject): GitObjectKind =
   ## fetch the GitObjectKind of a git object
   assert obj != nil
-  assert GitObjectKind.high == goRefDelta
-  let
-    kind = git_object_type(obj)
-    offset = kind + GitObjectKind.high.ord - GIT_OBJECT_REF_DELTA
-  if offset in GitObjectKind.low.ord .. GitObjectKind.high.ord:
-    result = offset.GitObjectKind
-  else:
+  assert GitObjectKind.low == goAny
+  result = GitObjectKind(git_object_type(obj) - GIT_OBJECT_ANY)
+  if validGitObjectKinds * {result} == {}:
     result = goInvalid
 
 proc newThing(obj: GitObject | GitCommit | GitTag): GitThing =
@@ -675,7 +677,7 @@ func isTag*(got: GitReference): bool =
 proc flags*(status: GitStatus): set[GitStatusFlag] =
   assert status != nil
   ## produce the set of flags indicating the status of the file
-  for flag in GitStatusFlag.low .. GitStatusFlag.high:
+  for flag in validGitStatusFlags.items:
     if flag.ord.uint == bitand(status.status.uint, flag.ord.uint):
       result.incl flag
 
@@ -763,7 +765,6 @@ proc copy*(commit: GitCommit): GitResult[GitCommit] =
   withResultOf git_commit_dup(addr dupe, commit):
     assert dupe != nil
     result.ok dupe
-  echo result.get
 
 proc copy*(thing: GitThing): GitResult[GitThing] =
   ## create a copy of the thing; free it with free

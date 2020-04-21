@@ -19,7 +19,7 @@ const
 template cleanup(directory: string) =
   try:
     removeDir(directory)
-    check not existsOrCreateDir(directory)
+    check not existsDir(directory)
   except OSError as e:
     echo "error removing ", directory
     echo "exception: ", e.msg

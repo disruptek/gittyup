@@ -1,4 +1,4 @@
-version = "2.4.1"
+version = "2.4.2"
 author = "disruptek"
 description = "higher-level git bindings that build upon nimgit2"
 license = "MIT"
@@ -11,7 +11,7 @@ proc execCmd(cmd: string) =
   exec cmd
 
 proc execTest(test: string) =
-  execCmd "nim c   -d:git2Git -d:git2SetVer=\"master\"          -f -r " & test
+  execCmd "nim c   -d:git2Git -d:git2SetVer=\"master\"             -r " & test
   execCmd "nim c   -d:git2Git -d:git2SetVer=\"master\"  -d:release -r " & test
   execCmd "nim c   -d:git2Git -d:git2SetVer=\"master\"  -d:danger  -r " & test
   #execCmd "nim cpp -d:git2Git -d:git2SetVer=\"master\"  -d:danger  -r " & test
