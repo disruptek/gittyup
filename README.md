@@ -1,6 +1,10 @@
 # gittyup
 higher-level git bindings that build upon nimgit2
 
+- `nim-1.0` [![Build Status](https://travis-ci.org/disruptek/gittyup.svg?branch=master)](https://travis-ci.org/disruptek/gittyup)
+- `arc +/ nim-1.3` [![Build Status](https://travis-ci.org/disruptek/gittyup.svg?branch=devel)](https://travis-ci.org/disruptek/gittyup)
+- `arc +/ cpp / nim-1.3` [![Build Status](https://travis-ci.org/disruptek/gittyup.svg?branch=cpp)](https://travis-ci.org/disruptek/gittyup)
+
 Build status:
 - `nim c`: [![Build Status](https://travis-ci.org/disruptek/gittyup.svg?branch=master)](https://travis-ci.org/disruptek/gittyup)
 - `nim cpp`: [![Build Status](https://travis-ci.org/disruptek/gittyup.svg?branch=cpp)](https://travis-ci.org/disruptek/gittyup)
