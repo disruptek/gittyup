@@ -13,10 +13,12 @@ import std/tables
 import std/uri
 
 const
-  git2SetVer {.strdefine, used.} = "master"
+  git2SetVer {.strdefine, used.} = "v1.0.0"
   hasWorkingStatus* {.deprecated.} = true
 
 when git2SetVer == "master":
+  discard
+elif git2SetVer == "v1.0.0":
   discard
 elif not defined(debugGit):
   {.fatal: "libgit2 version `" & git2SetVer & "` unsupported".}
@@ -622,6 +624,9 @@ proc short*(oid: GitOid; size: int): GitResult[string] =
     when git2SetVer == "master":
       withResultOf git_oid_nfmt(output, size.uint, oid):
         result.ok $output
+    elif git2SetVer == "v1.0.0":
+      withResultOf git_oid_nfmt(output, size.uint, oid):
+        result.ok $output
     else:
       git_oid_nfmt(output, size.uint, oid)
       result.ok $output
@@ -794,6 +799,9 @@ proc copy*(oid: GitOid): GitResult[GitOid] =
   var
     copied = cast[GitOid](sizeof(git_oid).alloc)
   when git2SetVer == "master":
+    withResultOf git_oid_cpy(copied, oid):
+      result.ok copied
+  elif git2SetVer == "v1.0.0":
     withResultOf git_oid_cpy(copied, oid):
       result.ok copied
   else:
@@ -1585,12 +1593,12 @@ iterator commitsForSpec*(repo: GitRepository;
     defer:
       dealloc options
 
-    block master:
+    block steve:
       let
         code = git_diff_options_init(options, GIT_DIFF_OPTIONS_VERSION).grc
       if code != grcOk:
         yield err[GitThing](code)
-        break master
+        break steve
 
       options.pathspec.count = len(spec).cuint
       options.pathspec.strings = cast[ptr cstring](allocCStringArray(spec))
@@ -1601,21 +1609,21 @@ iterator commitsForSpec*(repo: GitRepository;
       # setup a pathspec for matching against trees, and free it later
       ps := newPathSpec(spec):
         yield err[GitThing](code)
-        break master
+        break steve
 
       # we'll need a walker, and we'll want it freed
       walker := repo.newRevWalk:
         yield err[GitThing](code)
-        break master
+        break steve
 
       # find the head
       head := repo.getHeadOid:
         # no head, no problem
-        break master
+        break steve
 
       # start at the head
       gitTrap walker.push(head):
-        break master
+        break steve
 
       # iterate over ALL the commits
       # pass a copy of the head oid so revwalk can free it
@@ -1624,7 +1632,7 @@ iterator commitsForSpec*(repo: GitRepository;
         if rev.isErr:
           #yield ok[GitThing](rev.get)
           yield Result[GitThing, GitResultCode].ok rev.get
-          break master
+          break steve
         else:
           let
             matched = rev.get.commit.parentsMatch(options, ps)
@@ -1640,7 +1648,7 @@ iterator commitsForSpec*(repo: GitRepository;
               # the matching process produced an error
               #yield err[GitThing](matched.error)
               yield Result[GitThing, GitResultCode].err matched.error
-              break master
+              break steve
 
 proc tagCreateLightweight*(repo: GitRepository; target: GitThing;
                            name: string; force = false): GitResult[GitOid] =
