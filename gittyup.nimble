@@ -1,10 +1,13 @@
-version = "2.4.3"
+version = "2.4.4"
 author = "disruptek"
 description = "higher-level git bindings that build upon nimgit2"
 license = "MIT"
 requires "nim >= 1.0.4"
 requires "nimgit2 0.1.1"
 requires "https://github.com/disruptek/badresults < 2.0.0"
+
+# fix poor nimble behavior
+requires "regex >= 0.15.0"
 
 proc execCmd(cmd: string) =
   echo "execCmd:" & cmd
