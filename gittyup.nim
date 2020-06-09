@@ -20,8 +20,10 @@ when git2SetVer == "master":
   discard
 elif git2SetVer == "v1.0.0":
   discard
+elif git2SetVer == "v1.0.1":
+  discard
 elif not defined(debugGit):
-  {.fatal: "libgit2 version `" & git2SetVer & "` unsupported".}
+  {.warning: "libgit2 version `" & git2SetVer & "` unsupported".}
 
 import nimgit2
 import badresults
@@ -621,14 +623,7 @@ proc short*(oid: GitOid; size: int): GitResult[string] =
   withGit:
     output = cast[cstring](alloc(size + 1))
     output[size] = '\0'
-    when git2SetVer == "master":
-      withResultOf git_oid_nfmt(output, size.uint, oid):
-        result.ok $output
-    elif git2SetVer == "v1.0.0":
-      withResultOf git_oid_nfmt(output, size.uint, oid):
-        result.ok $output
-    else:
-      git_oid_nfmt(output, size.uint, oid)
+    withResultOf git_oid_nfmt(output, size.uint, oid):
       result.ok $output
     dealloc output
 
@@ -798,16 +793,8 @@ proc copy*(oid: GitOid): GitResult[GitOid] =
   assert oid != nil
   var
     copied = cast[GitOid](sizeof(git_oid).alloc)
-  when git2SetVer == "master":
-    withResultOf git_oid_cpy(copied, oid):
-      result.ok copied
-  elif git2SetVer == "v1.0.0":
-    withResultOf git_oid_cpy(copied, oid):
-      result.ok copied
-  else:
-    git_oid_cpy(copied, oid)
+  withResultOf git_oid_cpy(copied, oid):
     result.ok copied
-    assert copied != nil
 
 proc branchName*(got: GitReference): string =
   ## fetch a branch name assuming the reference is a branch
