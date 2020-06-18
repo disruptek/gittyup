@@ -21,7 +21,7 @@ proc execTest(test: string) =
   when NimMajor >= 1 and NimMinor >= 1:
     execCmd "nim c   -d:git2Git -d:git2SetVer=\"v1.0.1\" --gc:arc -r " & test
     execCmd "nim c   -d:git2Git -d:git2SetVer=\"v1.0.1\" -d:danger --gc:arc -r " & test
-    execCmd "nim c   -d:git2Static -d:git2SetVer=\"v1.0.1\" -d:danger --gc:arc -f " & test
+    execCmd "nim c   -d:git2Static -d:git2Git -d:git2SetVer=\"v1.0.1\" -d:danger --gc:arc -f " & test
 
 
 task test, "run tests for travis":
