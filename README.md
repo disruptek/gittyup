@@ -6,14 +6,13 @@ higher-level git bindings that build upon nimgit2
 - `arc +/ cpp / nim-1.3` [![Build Status](https://travis-ci.org/disruptek/gittyup.svg?branch=cpp)](https://travis-ci.org/disruptek/gittyup)
 
 ## Usage
-Use one of these combinations of defines, in decreasing preference:
+You need a libgit2 >= 1.0.0:
 
 ```
---define:git2Git --define:git2SetVer="master"
---define:git2DL --define:git2SetVer="0.28.4"
---define:git2Git --define:git2SetVer="v0.28.4"
---define:git2DL --define:git2SetVer="0.28.3"
---define:git2Git --define:git2SetVer="v0.28.3"
+--define:git2Git --define:git2SetVer="v1.0.1"
+--define:git2DL --define:git2SetVer="1.0.1"
+--define:git2Git --define:git2SetVer="v1.0.0"
+--define:git2DL --define:git2SetVer="1.0.0"
 ```
 
 This gives some idea for the syntax at present:
