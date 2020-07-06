@@ -13,7 +13,7 @@ import std/tables
 import std/uri
 
 const
-  git2SetVer {.strdefine, used.} = "v1.0.0"
+  git2SetVer {.strdefine, used.} = "v1.0.1"
   hasWorkingStatus* {.deprecated.} = true
 
 when git2SetVer == "master":
@@ -29,26 +29,10 @@ import nimgit2
 import badresults
 export badresults
 
-# there are some name changes between the 0.28 and later versions
-when compiles(git_clone_init_options):
-  template git_clone_options_init(options: ptr git_clone_options;
-                                  version: cint): cint =
-    git_clone_init_options(options, version)
-
-when compiles(git_checkout_init_options):
-  template git_checkout_options_init(options: ptr git_checkout_options;
-                                   version: cint): cint =
-    git_checkout_init_options(options, version)
-
-when compiles(git_diff_init_options):
-  template git_diff_options_init(options: ptr git_diff_options;
-                                   version: cint): cint =
-    git_diff_init_options(options, version)
-
-when compiles(git_status_init_options):
-  template git_status_options_init(options: ptr git_status_options;
-                                   version: cint): cint =
-    git_status_init_options(options, version)
+# git_strarray_dispose replaces git_strarray_free in >v1.0.1
+when not compiles(git_strarray_dispose):
+  template git_strarray_dispose(arr: ptr git_strarray) =
+    git_strarray_free(arr)
 
 {.hint: "libgit2 version `" & git2SetVer & "`".}
 
@@ -524,7 +508,7 @@ proc free*[T: GitHeapGits](point: ptr T) =
       elif T is git_remote:
         git_remote_free(point)
       elif T is git_strarray:
-        git_strarray_free(point)
+        git_strarray_dispose(point)
       elif T is git_tag:
         git_tag_free(point)
       elif T is git_commit:
@@ -1015,7 +999,7 @@ proc remoteRename*(repo: GitRepository; prior: string;
       list: git_strarray
     withResultOf git_remote_rename(addr list, repo, prior, next):
       defer:
-        git_strarray_free(addr list)
+        git_strarray_dispose(addr list)
       if list.count == 0'u:
         result.ok newSeq[string]()
       else:
@@ -1067,7 +1051,7 @@ proc tagList*(repo: GitRepository): GitResult[seq[string]] =
       list: git_strarray
     withResultOf git_tag_list(addr list, repo):
       defer:
-        git_strarray_free(addr list)
+        git_strarray_dispose(addr list)
       if list.count == 0'u:
         result.ok newSeq[string]()
       else:
