@@ -1,9 +1,10 @@
-version = "2.5.0"
+version = "2.5.1"
 author = "disruptek"
 description = "higher-level git bindings that build upon nimgit2"
 license = "MIT"
 requires "nim >= 1.0.4"
-requires "nimgit2 >= 0.1.1 & < 2.0.0"
+requires "nimgit2 >= 0.3.0 & < 1.0.0"
+requires "nimterop < 1.0.0"
 requires "https://github.com/disruptek/badresults < 2.0.0"
 
 # fix poor nimble behavior
