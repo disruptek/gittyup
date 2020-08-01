@@ -1149,51 +1149,45 @@ proc repositoryState*(repository: GitRepository): GitRepoState =
   withGit:
     result = cast[GitRepoState](git_repository_state(repository))
 
-when hasWorkingStatus == true:
-  iterator status*(repository: GitRepository; show: GitStatusShow;
-                   flags = defaultStatusFlags): GitResult[GitStatus] =
-    ## iterate over files in the repo using the given search flags
-    withGit:
+iterator status*(repository: GitRepository; show: GitStatusShow;
+                 flags = defaultStatusFlags): GitResult[GitStatus] =
+  ## iterate over files in the repo using the given search flags
+  withGit:
+    var
+      options = cast[ptr git_status_options](sizeof(git_status_options).alloc)
+    defer:
+      dealloc options
+
+    block:
       var
-        options = cast[ptr git_status_options](sizeof(git_status_options).alloc)
+        code = git_status_options_init(options, GIT_STATUS_OPTIONS_VERSION).grc
+      if code != grcOk:
+        # throw the error code
+        yield Result[GitStatus, GitResultCode].err(code)
+        break
+
+      # add the options specified by the user
+      options.show = cast[git_status_show_t](show)
+      for flag in flags.items:
+        options.flags = bitand(options.flags.uint, flag.ord.uint).cuint
+
+      # create a new iterator
+      var
+        statum: GitStatusList
+      code = git_status_list_new(addr statum, repository, options).grc
+      if code != grcOk:
+        # throw the error code
+        yield Result[GitStatus, GitResultCode].err(code)
+        break
+      # remember to free it
       defer:
-        dealloc options
+        statum.free
 
-      block:
-        var
-          code = git_status_options_init(options, GIT_STATUS_OPTIONS_VERSION).grc
-        if code != grcOk:
-          # throw the error code
-          yield Result[GitStatus, GitResultCode].err(code)
-          break
-
-        # add the options specified by the user
-        options.show = cast[git_status_show_t](show)
-        for flag in flags.items:
-          options.flags = bitand(options.flags.uint, flag.ord.uint).cuint
-
-        # create a new iterator
-        var
-          statum: GitStatusList
-        code = git_status_list_new(addr statum, repository, options).grc
-        if code != grcOk:
-          # throw the error code
-          yield Result[GitStatus, GitResultCode].err(code)
-          break
-        # remember to free it
-        defer:
-          statum.free
-
-        # iterate over the status list by entry index
-        for index in 0 ..< git_status_list_entrycount(statum):
-          # and yield a status object result per each
-          yield Result[GitStatus, GitResultCode].ok git_status_byindex(statum, index.cuint)
-          #yield ok[GitStatus](git_status_byindex(statum, index.cuint))
-
-else:
-  iterator status*(repository: GitRepository; show: GitStatusShow;
-                   flags = defaultStatusFlags): GitResult[GitStatus] =
-    raise newException(ValueError, "you need a newer libgit2 to do that")
+      # iterate over the status list by entry index
+      for index in 0 ..< git_status_list_entrycount(statum):
+        # and yield a status object result per each
+        yield Result[GitStatus, GitResultCode].ok git_status_byindex(statum, index.cuint)
+        #yield ok[GitStatus](git_status_byindex(statum, index.cuint))
 
 proc checkoutTree*(repo: GitRepository; thing: GitThing;
                    strategy = defaultCheckoutStrategy): GitResultCode =
