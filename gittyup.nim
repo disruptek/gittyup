@@ -429,13 +429,12 @@ template `:=`*[T](v: untyped{nkIdent}; vv: Result[T, GitResultCode];
   defer:
     if isOk(vr):
       when defined(debugGit):
-        echo "auto-free of ", typeof(unsafeGet(vr))
+        debug "auto-free of " & $typeof(unsafeGet(vr))
       free(unsafeGet(vr))
   if not isOk(vr):
     var code {.used, inject.} = vr.error
-#    when defined(debugGit):
-#      debug "failure ", $v, ": ", $code
-#      echo "failure ", $v, ": ", $code
+    when defined(debugGit):
+      debug "failure: " & $code
     body
 
 proc normalizeUrl(uri: Uri): Uri =
@@ -451,14 +450,12 @@ proc init*(): bool =
     result = git_libgit2_init() > 0
     when defined(debugGit):
       debug "git init"
-      echo "git init"
   else:
     block:
       once:
         result = git_libgit2_init() > 0
         when defined(debugGit):
           debug "git init"
-          echo "git init"
         break
       result = true
 
@@ -467,7 +464,6 @@ proc shutdown*(): bool =
     result = git_libgit2_shutdown() >= 0
     when defined(debugGit):
       debug "git shut"
-      echo "git shut"
   else:
     result = true
 
@@ -480,6 +476,8 @@ template withGit(body: untyped) =
   body
 
 template setResultAsError(result: typed; code: cint | GitResultCode) =
+  when defined(debugGit):
+    debug "git said " & $grc(code)
   when result is GitResultCode:
     result = grc(code)
   elif result is GitResult:
@@ -489,6 +487,8 @@ template withResultOf(gitsaid: cint | GitResultCode; body: untyped) =
   ## when git said there was an error, set the result code;
   ## else, run the body
   if grc(gitsaid) == grcOk:
+    when defined(debugGit):
+      debug "git said " & $grc(gitsaid)
     body
   else:
     setResultAsError(result, gitsaid)
@@ -500,7 +500,7 @@ proc free*[T: GitHeapGits](point: ptr T) =
         raise newException(Defect, "attempt to free nil git heap object")
     else:
       when defined(debugGit):
-        echo "\t~> freeing git", typeof(point)
+        debug "\t~> freeing git " & $typeof(point)
       when T is git_repository:
         git_repository_free(point)
       elif T is git_reference:
@@ -540,7 +540,7 @@ proc free*[T: GitHeapGits](point: ptr T) =
       else:
         {.error: "missing a free definition for " & $typeof(T).}
       when defined(debugGit):
-        echo "\t~> freed   git", typeof(point)
+        debug "\t~> freed   git " & $typeof(point)
 
 proc free*[T: NimHeapGits](point: ptr T) =
   if point == nil:
@@ -548,10 +548,10 @@ proc free*[T: NimHeapGits](point: ptr T) =
       raise newException(Defect, "attempt to free nil nim heap git object")
   else:
     when defined(debugGit):
-      echo "\t~> freeing nim", typeof(point)
+      debug "\t~> freeing nim " & $typeof(point)
     dealloc(point)
     when defined(debugGit):
-      echo "\t~> freed   nim", typeof(point)
+      debug "\t~> freed   nim " & $typeof(point)
 
 proc free*(thing: sink GitThing) =
   assert thing != nil
@@ -571,6 +571,10 @@ proc free*(entries: sink GitTreeEntries) =
   withGit:
     for entry in entries.items:
       free(entry)
+
+proc free*(s: string) =
+  ## for template compatability only
+  discard
 
 func kind(obj: GitObject): GitObjectKind =
   ## fetch the GitObjectKind of a git object
@@ -665,6 +669,10 @@ proc flags*(status: GitStatus): set[GitStatusFlag] =
     if flag.ord.uint == bitand(status.status.uint, flag.ord.uint):
       result.incl flag
 
+proc repositoryPath*(repo: GitRepository): string =
+  ## the path of the .git folder, or the repo itself if it's bare
+  result = $git_repository_path(repo)
+
 func `$`*(tags: GitTagTable): string =
   assert tags != nil
   result = "{poorly-rendered tagtable}"
@@ -683,11 +691,14 @@ func `$`*(remote: GitRemote): string =
 
 func `$`*(repo: GitRepository): string =
   assert repo != nil
-  result = $git_repository_path(repo)
+  result = repositoryPath(repo)
+
+func `$`*(buffer: git_buf): string =
+  result = $cast[cstring](buffer)
 
 func `$`*(buffer: ptr git_buf): string =
   assert buffer != nil
-  result = $cast[cstring](buffer)
+  result = $cast[cstring](buffer[])
 
 func `$`*(annotated: ptr git_annotated_commit): string =
   assert annotated != nil
@@ -865,7 +876,7 @@ proc free*(table: sink GitTagTable) =
   assert table != nil
   withGit:
     when defined(debugGit):
-      echo "\t~> freeing nim", typeof(table)
+      debug "\t~> freeing nim " & $typeof(table)
     for tag, obj in table.mpairs:
       when tag is GitTag:
         tag.free
@@ -933,17 +944,17 @@ proc clone*(uri: Uri; path: string; branch = ""): GitResult[GitRepository] =
   withGit:
     var
       options = cast[ptr git_clone_options](sizeof(git_clone_options).alloc)
-    defer:
+    try:
+      withResultOf git_clone_options_init(options, GIT_CLONE_OPTIONS_VERSION):
+        if branch != "":
+          options.checkout_branch = branch
+        var
+          repo: GitRepository
+        withResultOf git_clone(addr repo, $uri, path, options):
+          assert repo != nil
+          result.ok repo
+    finally:
       dealloc options
-    withResultOf git_clone_options_init(options, GIT_CLONE_OPTIONS_VERSION):
-      if branch != "":
-        options.checkout_branch = branch
-      var
-        repo: GitRepository
-      withResultOf git_clone(addr repo, $uri, path, options):
-        assert repo != nil
-        result.ok repo
-
 proc setHeadDetached*(repo: GitRepository; oid: GitOid): GitResultCode =
   ## detach the HEAD and point it at the given OID
   withGit:
@@ -954,13 +965,14 @@ proc setHeadDetached*(repo: GitRepository; reference: string): GitResultCode =
   withGit:
     var
       oid: GitOid = cast[GitOid](sizeof(git_oid).alloc)
-    defer:
+    try:
+      withResultOf git_oid_fromstr(oid, reference):
+        assert oid != nil
+        result = repo.setHeadDetached(oid)
+    finally:
       free oid
-    withResultOf git_oid_fromstr(oid, reference):
-      assert oid != nil
-      result = repo.setHeadDetached(oid)
 
-proc openRepository*(path: string): GitResult[GitRepository] =
+proc repositoryOpen*(path: string): GitResult[GitRepository] =
   ## open a repository by path; the repository must be freed
   withGit:
     var
@@ -968,6 +980,11 @@ proc openRepository*(path: string): GitResult[GitRepository] =
     withResultOf git_repository_open(addr repo, path):
       assert repo != nil
       result.ok repo
+
+proc openRepository*(path: string): GitResult[GitRepository]
+  {.deprecated: "use repositoryOpen".} =
+  ## alias for `repositoryOpen`
+  result = repositoryOpen(path)
 
 proc repositoryHead*(repo: GitRepository): GitResult[GitReference] =
   ## fetch the reference for the repository's head; the reference must be freed
@@ -998,12 +1015,14 @@ proc remoteRename*(repo: GitRepository; prior: string;
     var
       list: git_strarray
     withResultOf git_remote_rename(addr list, repo, prior, next):
-      defer:
+      try:
+        if list.count == 0'u:
+          result.ok newSeq[string]()
+        else:
+          result.ok cstringArrayToSeq(cast[cstringArray](list.strings),
+                                      list.count)
+      finally:
         git_strarray_dispose(addr list)
-      if list.count == 0'u:
-        result.ok newSeq[string]()
-      else:
-        result.ok cstringArrayToSeq(cast[cstringArray](list.strings), list.count)
 
 proc remoteDelete*(repo: GitRepository; name: string): GitResultCode =
   ## delete a remote from the repository
@@ -1050,12 +1069,14 @@ proc tagList*(repo: GitRepository): GitResult[seq[string]] =
     var
       list: git_strarray
     withResultOf git_tag_list(addr list, repo):
-      defer:
+      try:
+        if list.count == 0'u:
+          result.ok newSeq[string]()
+        else:
+          result.ok cstringArrayToSeq(cast[cstringArray](list.strings),
+                                      list.count)
+      finally:
         git_strarray_dispose(addr list)
-      if list.count == 0'u:
-        result.ok newSeq[string]()
-      else:
-        result.ok cstringArrayToSeq(cast[cstringArray](list.strings), list.count)
 
 proc lookupThing*(repo: GitRepository; name: string): GitResult[GitThing] =
   ## try to look some thing up in the repository with the given name
@@ -1155,39 +1176,40 @@ iterator status*(repository: GitRepository; show: GitStatusShow;
   withGit:
     var
       options = cast[ptr git_status_options](sizeof(git_status_options).alloc)
-    defer:
+    try:
+
+      block:
+        var
+          code = git_status_options_init(options,
+                                         GIT_STATUS_OPTIONS_VERSION).grc
+        if code != grcOk:
+          # throw the error code
+          yield Result[GitStatus, GitResultCode].err(code)
+          break
+
+        # add the options specified by the user
+        options.show = cast[git_status_show_t](show)
+        for flag in flags.items:
+          options.flags = bitand(options.flags.uint, flag.ord.uint).cuint
+
+        # create a new iterator
+        var
+          statum: GitStatusList
+        code = git_status_list_new(addr statum, repository, options).grc
+        if code != grcOk:
+          # throw the error code
+          yield Result[GitStatus, GitResultCode].err(code)
+          break
+        try:
+          # iterate over the status list by entry index
+          for index in 0 ..< git_status_list_entrycount(statum):
+            # and yield a status object result per each
+            yield Result[GitStatus, GitResultCode].ok git_status_byindex(statum, index.cuint)
+            #yield ok[GitStatus](git_status_byindex(statum, index.cuint))
+        finally:
+          statum.free
+    finally:
       dealloc options
-
-    block:
-      var
-        code = git_status_options_init(options, GIT_STATUS_OPTIONS_VERSION).grc
-      if code != grcOk:
-        # throw the error code
-        yield Result[GitStatus, GitResultCode].err(code)
-        break
-
-      # add the options specified by the user
-      options.show = cast[git_status_show_t](show)
-      for flag in flags.items:
-        options.flags = bitand(options.flags.uint, flag.ord.uint).cuint
-
-      # create a new iterator
-      var
-        statum: GitStatusList
-      code = git_status_list_new(addr statum, repository, options).grc
-      if code != grcOk:
-        # throw the error code
-        yield Result[GitStatus, GitResultCode].err(code)
-        break
-      # remember to free it
-      defer:
-        statum.free
-
-      # iterate over the status list by entry index
-      for index in 0 ..< git_status_list_entrycount(statum):
-        # and yield a status object result per each
-        yield Result[GitStatus, GitResultCode].ok git_status_byindex(statum, index.cuint)
-        #yield ok[GitStatus](git_status_byindex(statum, index.cuint))
 
 proc checkoutTree*(repo: GitRepository; thing: GitThing;
                    strategy = defaultCheckoutStrategy): GitResultCode =
@@ -1253,17 +1275,17 @@ proc checkoutHead*(repo: GitRepository;
   withGit:
     var
       options = cast[ptr git_checkout_options](sizeof(git_checkout_options).alloc)
-    defer:
+    try:
+      # setup our checkout options
+      withResultOf git_checkout_options_init(options,
+                                             GIT_CHECKOUT_OPTIONS_VERSION):
+        # reset the strategy per flags
+        options.checkout_strategy = setFlags(strategy)
+
+        # checkout the head
+        result = git_checkout_head(repo, options).grc
+    finally:
       dealloc options
-
-    # setup our checkout options
-    withResultOf git_checkout_options_init(options,
-                                           GIT_CHECKOUT_OPTIONS_VERSION):
-      # reset the strategy per flags
-      options.checkout_strategy = setFlags(strategy)
-
-      # checkout the head
-      result = git_checkout_head(repo, options).grc
 
 proc setHead*(repo: GitRepository; short: string): GitResultCode =
   ## set the head of a repository
@@ -1291,15 +1313,16 @@ proc treeEntryByPath*(thing: GitThing; path: string): GitResult[GitTreeEntry] =
       leaf: GitTreeEntry
     # get the entry by path using the thing as a tree
     withResultOf git_tree_entry_bypath(addr leaf, cast[GitTree](thing.o), path):
-      defer:
-        leaf.free
-      # if it's okay, we have to make a copy of it that the user can free,
-      # because when our thing is freed, it will invalidate the leaf var.
-      var
-        entry: GitTreeEntry
-      withResultOf git_tree_entry_dup(addr entry, leaf):
-        assert entry != nil
-        result.ok entry
+      try:
+        # if it's okay, we have to make a copy of it that the user can free,
+        # because when our thing is freed, it will invalidate the leaf var.
+        var
+          entry: GitTreeEntry
+        withResultOf git_tree_entry_dup(addr entry, leaf):
+          assert entry != nil
+          result.ok entry
+      finally:
+        free leaf
 
 proc treeEntryToThing*(repo: GitRepository;
                        entry: GitTreeEntry): GitResult[GitThing] =
@@ -1515,26 +1538,25 @@ proc zeroParentsMatch(commit: GitCommit; ps: GitPathSpec): GitResult[bool] =
     tree: ptr git_tree
   # try to grab the commit's tree
   withResultOf git_commit_tree(addr tree, commit):
-    # remember to free the tree later
-    defer:
+    try:
+      # these don't seem worth storing...
+      #var matches: ptr git_pathspec_match_list
+      let
+        gps: uint32 = {gpsNoMatchError}.setFlags
+        # match the pathspec against the tree
+        code = git_pathspec_match_tree(nil, tree, gps, ps).grc
+      case code:
+      of grcOk:
+        # this feels like a match
+        result.ok true
+      of grcNotFound:
+        # this is fine, but it's not a match
+        result.ok false
+      else:
+        # this is probably not that fine; error on it
+        result.err code
+    finally:
       free tree
-
-    # these don't seem worth storing...
-    #var matches: ptr git_pathspec_match_list
-    let
-      gps: uint32 = {gpsNoMatchError}.setFlags
-      # match the pathspec against the tree
-      code = git_pathspec_match_tree(nil, tree, gps, ps).grc
-    case code:
-    of grcOk:
-      # this feels like a match
-      result.ok true
-    of grcNotFound:
-      # this is fine, but it's not a match
-      result.ok false
-    else:
-      # this is probably not that fine; error on it
-      result.err code
 
 proc parentsMatch(commit: GitCommit; options: ptr git_diff_options;
                   ps: GitPathSpec): GitResult[bool] =
@@ -1653,7 +1675,8 @@ proc setBranchUpstream*(branch: GitReference; name: string): GitResultCode =
   withGit:
     result = git_branch_set_upstream(branch, name).grc
 
-proc branchRemoteName*(repo: GitRepository; branch: string): GitResult[GitBuf] =
+proc branchRemoteName*(repo: GitRepository;
+                       branch: string): GitResult[string] =
   ## try to fetch a single remote for a remote tracking branch
   assert repo != nil
   withGit:
@@ -1661,11 +1684,10 @@ proc branchRemoteName*(repo: GitRepository; branch: string): GitResult[GitBuf] =
       buff: git_buf
     # "1024 bytes oughta be enough for anybody"
     withResultOf git_buf_grow(addr buff, 1024.cuint):
-      block:
+      try:
         withResultOf git_branch_remote_name(addr buff, repo, branch):
-          result.ok addr buff
-          break
-        # free the buffer if the call failed
+          result.ok $buff
+      finally:
         git_buf_dispose(addr buff)
 
 iterator branches*(repo: GitRepository;
@@ -1759,14 +1781,14 @@ proc defaultSignature*(repo: GitRepository): GitResult[GitSignature] =
 proc defaultSignature*(repo: GitRepository; time: Time): GitResult[GitSignature] =
   ## create a new signature using git configuration; must be freed
   assert repo != nil
-  result = repo.defaultSignature
-  if result.isOk:
-    defer:
-      free result.get
-    var
-      sig = result.get
+  let default = repo.defaultSignature
+  if default.isOk:
+    template sig: GitSignature = default.get
     assert sig != nil
-    result = newSignature($sig.name, $sig.email, time)
+    try:
+      result = newSignature($sig.name, $sig.email, time)
+    finally:
+      free sig
 
 proc tagCreate*(repo: GitRepository; target: GitThing; name: string;
                 tagger: GitSignature;
@@ -1816,3 +1838,21 @@ proc tagDelete*(repo: GitRepository; name: string): GitResultCode =
   assert repo != nil
   withGit:
     result = git_tag_delete(repo, name).grc
+
+proc repositoryDiscover*(path: string; ceilings: seq[string] = @[];
+                         xfs = true): GitResult[string] =
+  ## try to find the path of a repository in `path` or a parent; `xfs`
+  ## allows cross-filesystem traversal, while `ceilings` holds stop-dirs.
+  withGit:
+    const
+      sep = $(GIT_PATH_LIST_SEPARATOR)
+    var
+      buff: git_buf
+    # "4096 bytes oughta be enough for anybody"
+    withResultOf git_buf_grow(addr buff, 4096.cuint):
+      try:
+        withResultOf git_repository_discover(addr buff, path, xfs.cint,
+                                             ceilings.join(sep)):
+          result.ok $buff
+      finally:
+        git_buf_dispose(addr buff)
