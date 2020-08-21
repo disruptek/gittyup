@@ -19,7 +19,7 @@ proc execTest(test: string) =
   execCmd "nim c   -d:git2Git -d:git2SetVer=\"v1.0.1\"  -d:release -r " & test
   execCmd "nim c   -d:git2Git -d:git2SetVer=\"v1.0.1\"  -d:danger  -r " & test
   #execCmd "nim cpp -d:git2Git -d:git2SetVer=\"v1.0.0\"  -d:danger  -r " & test
-  when NimMajor >= 1 and NimMinor >= 1:
+  when (NimMajor, NimMinor) >= (1, 1):
     execCmd "nim c   -d:git2Git -d:git2SetVer=\"v1.0.1\" --gc:arc -r " & test
     execCmd "nim c   -d:git2Git -d:git2SetVer=\"v1.0.1\" -d:danger --gc:arc -r " & test
     execCmd "nim c   -d:git2Static -d:git2Git -d:git2SetVer=\"v1.0.1\" -d:danger --gc:arc -f " & test
