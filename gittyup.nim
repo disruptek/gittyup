@@ -22,6 +22,10 @@ elif git2SetVer == "v1.0.0":
   discard
 elif git2SetVer == "v1.0.1":
   discard
+elif git2SetVer == "1.0.1" and defined(git2JBB):
+  discard
+elif git2SetVer == "1.0.0" and defined(git2JBB):
+  discard
 elif not defined(debugGit):
   {.warning: "libgit2 version `" & git2SetVer & "` unsupported".}
 
@@ -1097,7 +1101,7 @@ proc addTag(tags: var GitTagTable; name: string;
   # if it's not a tag, just add it to the table and move on
   if thing.kind != goTag:
     # no need to peel this thing
-    tags.add name, thing
+    tags[name] = thing
     result = grcOk
   else:
     # it's a tag, so attempt to dereference it
@@ -1108,7 +1112,7 @@ proc addTag(tags: var GitTagTable; name: string;
       result = target.error
     else:
       # add the thing's target to the table under the current name
-      tags.add name, target.get
+      tags[name] = target.get
       result = grcOk
     # free the thing; we don't need it anymore
     free thing

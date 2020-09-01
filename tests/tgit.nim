@@ -1,4 +1,3 @@
-import std/tables
 import std/uri
 import std/strutils
 import std/os
@@ -19,7 +18,7 @@ const
 template cleanup(directory: string) =
   try:
     removeDir(directory)
-    check not existsDir(directory)
+    check not dirExists(directory)
   except OSError as e:
     echo "error removing ", directory
     echo "exception: ", e.msg
@@ -31,7 +30,7 @@ suite "gittyup":
       tmpdir = getTempDir() / "gittyup-" & $getCurrentProcessId() / ""
     tmpdir.cleanup
     let
-      open = openRepository(getCurrentDir())
+      open = repositoryOpen(getCurrentDir())
     check open.isOk
     var repo = open.get
     #checkpoint code.dumpError
