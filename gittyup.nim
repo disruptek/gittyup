@@ -955,6 +955,7 @@ proc clone*(uri: Uri; path: string; branch = ""): GitResult[GitRepository] =
           result.ok repo
     finally:
       dealloc options
+
 proc setHeadDetached*(repo: GitRepository; oid: GitOid): GitResultCode =
   ## detach the HEAD and point it at the given OID
   withGit:
