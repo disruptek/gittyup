@@ -1,1 +1,4 @@
 nim.cfg
+nimblemeta.json
+bin
+deps
