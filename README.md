@@ -1,18 +1,35 @@
 # gittyup
-higher-level git bindings that build upon nimgit2
 
-- `nim-1.0` [![Build Status](https://travis-ci.org/disruptek/gittyup.svg?branch=master)](https://travis-ci.org/disruptek/gittyup)
-- `arc +/ nim-1.3` [![Build Status](https://travis-ci.org/disruptek/gittyup.svg?branch=devel)](https://travis-ci.org/disruptek/gittyup)
-- `arc +/ cpp / nim-1.3` [![Build Status](https://travis-ci.org/disruptek/gittyup.svg?branch=cpp)](https://travis-ci.org/disruptek/gittyup)
+[![Test Matrix](https://github.com/disruptek/gittyup/workflows/CI/badge.svg)](https://github.com/disruptek/gittyup/actions?query=workflow%3ACI)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/disruptek/gittyup?style=flat)](https://github.com/disruptek/gittyup/releases/latest)
+![Minimum supported Nim version](https://img.shields.io/badge/nim-1.0.8%2B-informational?style=flat&logo=nim)
+[![License](https://img.shields.io/github/license/disruptek/gittyup?style=flat)](#license)
+[![buy me a coffee](https://img.shields.io/badge/donate-buy%20me%20a%20coffee-orange.svg)](https://www.buymeacoffee.com/disruptek)
 
-## Usage
-You need a libgit2 >= 1.0.0:
+This is a _higher_-level and idiomatic abstraction for
+[libgit2](https://libgit2.org/) that builds upon the
+[nimgit2](https://github.com/genotrance/nimgit2) wrapper produced by
+[nimterop](https://github.com/nimterop/nimterop).
+
+## Installation
 
 ```
---define:git2Git --define:git2SetVer="v1.0.1"
---define:git2DL --define:git2SetVer="1.0.1"
---define:git2Git --define:git2SetVer="v1.0.0"
---define:git2DL --define:git2SetVer="1.0.0"
+$ nimph clone disruptek/gittyup
+```
+or if you're still using Nimble like it's 2012,
+```
+$ nimble install https://github.com/disruptek/gittyup
+```
+
+## Usage
+
+You need a libgit2 >= 1.0.0; I recommend one of these combinations of build
+flags:
+
+```
+--define:git2Git --define:git2SetVer="v1.0.1"  # build libraries from scratch
+--define:git2JBB --define:git2SetVer="1.0.1"   # pre-built Julia Binaries
+--define:git2Std --define:git2SetVer="1.0.1"   # use your system's libgit2
 ```
 
 This gives some idea for the syntax at present:
@@ -42,6 +59,8 @@ block cloning:
     # you don't have to leave, but i recommend it
     break
 
+  # repo is symbol pointing to a GitRepository here
+
   # "manual" call invocation means you perform your
   # own memory work, but it's sometimes more ideal
   let
@@ -63,7 +82,10 @@ gittyup continuous integration tests run flavors with `--gc:arc`, `cpp`,
 Linux; they should be pretty comprehensive.
 
 ## Documentation
-See [the documentation for the gittyup module](https://disruptek.github.io/gittyup/gittyup.html) as generated directly from the source.
+
+See [the documentation for the gittyup module](https://disruptek.github.io/gittyup/gittyup.html) as generated directly from the source.  I often find
+[the libgit2 reference documentation site](https://libgit2.org/) useful
+as well.
 
 ## License
 MIT
