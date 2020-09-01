@@ -1,0 +1,6 @@
+[submodule "badresults"]
+	path = badresults
+	url = https://github.com/disruptek/badresults
+[submodule "nimgit2"]
+	path = nimgit2
+	url = https://github.com/genotrance/nimgit2
