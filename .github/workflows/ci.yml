@@ -126,6 +126,7 @@ jobs:
         shell: bash
         run: |
           cd gittyup
+          git fetch --all
           nimble --accept develop
           nimble test
 
