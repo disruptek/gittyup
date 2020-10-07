@@ -7,7 +7,7 @@ requires "nimgit2 >= 0.3.1 & < 0.4.0"
 requires "https://github.com/disruptek/badresults < 2.0.0"
 
 # impose a limit on nimterop
-requires "nimterop <= 0.6.11"
+requires "nimterop >= 0.6.12"
 
 # fix poor nimble behavior
 requires "regex >= 0.15.0"
