@@ -449,6 +449,24 @@ proc normalizeUrl(uri: Uri): Uri =
     result.hostname = "github.com"
     result.scheme = "ssh"
 
+proc loadCerts() =
+  # https://github.com/wildart/julia/commit/2a59c5fcb579c76715f0015784b6a0a8ebda0c0c
+  var
+    cfile = getEnv("SSL_CERT_FILE")
+    cdir = getEnv("SSL_CERT_DIR")
+  if not fileExists(cfile): cfile = ""
+  if not dirExists(cdir): cdir = ""
+  if cfile.len == 0 and cdir.len == 0:
+    when defined(Linux):
+      cfile = "/etc/ssl/certs/ca-certificates.crt"
+      if not fileExists(cfile):
+        return
+    else:
+      return
+
+  discard git_libgit2_opts(
+    GIT_OPT_SET_SSL_CERT_LOCATIONS.cint, cfile.cstring, cdir.cstring)
+
 proc init*(): bool =
   when defined(gitShutsDown):
     result = git_libgit2_init() > 0
@@ -462,6 +480,7 @@ proc init*(): bool =
           debug "git init"
         break
       result = true
+  once: loadCerts()
 
 proc shutdown*(): bool =
   when defined(gitShutsDown):
