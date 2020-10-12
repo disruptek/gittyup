@@ -480,6 +480,7 @@ proc init*(): bool =
           debug "git init"
         break
       result = true
+  once: loadCerts()
 
 proc shutdown*(): bool =
   when defined(gitShutsDown):
@@ -492,7 +493,6 @@ proc shutdown*(): bool =
 template withGit(body: untyped) =
   if not init():
     raise newException(OSError, "unable to init git")
-  loadCerts()
   defer:
     if not shutdown():
       raise newException(OSError, "unable to shut git")
