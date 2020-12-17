@@ -80,9 +80,13 @@ block cloning:
 
 ## Tests
 
-gittyup continuous integration tests run flavors with `--gc:arc`, `cpp`,
-`-d:danger`, and the libgit2 versions listed above, on Windows, OS X, and
-Linux; they should be pretty comprehensive.
+### cpp --gc:arc
+
+Unsupported due to ARC codegen bug.
+
+### everything else
+
+Supported on Windows, OS X, Linux.
 
 ## Documentation
 
