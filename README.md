@@ -11,15 +11,19 @@ This is a _higher_-level and idiomatic abstraction for
 [nimgit2](https://github.com/genotrance/nimgit2) wrapper produced by
 [nimterop](https://github.com/nimterop/nimterop).
 
-## Installation
+## Support
 
-```
-$ nimph clone disruptek/gittyup
-```
-or if you're still using Nimble like it's 2012,
-```
-$ nimble install https://github.com/disruptek/gittyup
-```
+### cpp --cc:clang --define:git2Static
+
+Unsupported due to codegen bug.  Note that this generally includes MacOSX.
+
+### cpp --gc:arc
+
+Unsupported due to ARC codegen bug.
+
+### everything else
+
+Supported on Windows, OS X, Linux.
 
 ## Usage
 
@@ -27,12 +31,15 @@ You need a libgit2 >= 1.0.0; I recommend one of these combinations of build
 flags:
 
 ```
---define:git2Git --define:git2SetVer="v1.0.1"  # build libraries from scratch
---define:git2JBB --define:git2SetVer="1.0.1"   # pre-built Julia Binaries
---define:git2Std --define:git2SetVer="1.0.1"   # use your system's libgit2
+# build libraries from scratch using the libgit2 repo
+--define:git2Git --define:git2SetVer="v1.0.1"
+# use your system's libgit2
+--define:git2Std --define:git2SetVer="1.0.1"
+# use pre-built Julia Binaries
+--define:git2JBB --define:git2SetVer="1.0.1"
 ```
 
-This gives some idea for the syntax at present:
+This gives some idea for the usage:
 
 ```nim
 import gittyup
@@ -75,11 +82,15 @@ block cloning:
 # repo is now out of scope and will be freed automatically
 ```
 
-## Tests
+## Installation
 
-gittyup continuous integration tests run flavors with `--gc:arc`, `cpp`,
-`-d:danger`, and the libgit2 versions listed above, on Windows, OS X, and
-Linux; they should be pretty comprehensive.
+```
+$ nimph clone gittyup
+```
+or if you're still using Nimble like it's 2012,
+```
+$ nimble install https://github.com/disruptek/gittyup
+```
 
 ## Documentation
 

@@ -14,7 +14,6 @@ import std/uri
 
 const
   git2SetVer {.strdefine, used.} = "v1.0.1"
-  hasWorkingStatus* {.deprecated.} = true
 
 when git2SetVer == "master":
   discard
@@ -339,7 +338,9 @@ template grc(code: GitResultCode): GitResultCode = code
 template gec(code: cint): GitErrorClass = cast[GitErrorClass](code.ord)
 
 # can't remember why we need this, but i'm curious.  let me know.
-proc hash*(gcs: GitCheckoutStrategy): Hash = gcs.ord.hash
+proc hash*(gcs: GitCheckoutStrategy): Hash =
+  ## convenience
+  gcs.ord.hash
 
 macro enumValues(e: typed): untyped =
   newNimNode(nnkCurly).add(e.getType[1][1..^1])
@@ -374,6 +375,7 @@ const
       commonDefaultStatusFlags + {gsoSortCaseInsensitively}
 
 proc dumpError*(code: GitResultCode): string =
+  ## retrieves the last git error message
   let err = git_error_last()
   if err != nil:
     result = $gec(err.klass) & " error: " & $err.message
@@ -442,9 +444,12 @@ template `:=`*[T](v: untyped{nkIdent}; vv: Result[T, GitResultCode];
     body
 
 proc normalizeUrl(uri: Uri): Uri =
+  ## turn a git@github.com: url into an ssh url with username, hostname
+  const
+    ghPrefix = "git@github.com:"
   result = uri
-  if result.scheme == "" and result.path.startsWith("git@github.com:"):
-    result.path = result.path["git@github.com:".len .. ^1]
+  if result.scheme == "" and result.path.startsWith ghPrefix:
+    result.path = result.path[ghPrefix.len .. ^1]
     result.username = "git"
     result.hostname = "github.com"
     result.scheme = "ssh"
@@ -468,6 +473,8 @@ proc loadCerts() =
     GIT_OPT_SET_SSL_CERT_LOCATIONS.cint, cfile.cstring, cdir.cstring)
 
 proc init*(): bool =
+  ## initialize the library to prepare for git operations;
+  ## returns true if libgit2 was initialized
   when defined(gitShutsDown):
     result = git_libgit2_init() > 0
     when defined(debugGit):
@@ -483,6 +490,8 @@ proc init*(): bool =
   once: loadCerts()
 
 proc shutdown*(): bool =
+  ## shutdown the library, freeing any libgit2 data;
+  ## returns true if shutdown was successful
   when defined(gitShutsDown):
     result = git_libgit2_shutdown() >= 0
     when defined(debugGit):
@@ -491,6 +500,7 @@ proc shutdown*(): bool =
     result = true
 
 template withGit(body: untyped) =
+  ## convenience to ensure git is initialized and shutdown
   if not init():
     raise newException(OSError, "unable to init git")
   defer:
@@ -499,6 +509,8 @@ template withGit(body: untyped) =
   body
 
 template setResultAsError(result: typed; code: cint | GitResultCode) =
+  ## given a git result code, assign it to the result to indicate error;
+  ## this is adaptive to different return types
   when defined(debugGit):
     debug "git said " & $grc(code)
   when result is GitResultCode:
@@ -517,6 +529,7 @@ template withResultOf(gitsaid: cint | GitResultCode; body: untyped) =
     setResultAsError(result, gitsaid)
 
 proc free*[T: GitHeapGits](point: ptr T) =
+  ## perform a free of a git-managed pointer
   withGit:
     if point == nil:
       when not defined(release) and not defined(danger):
@@ -566,6 +579,7 @@ proc free*[T: GitHeapGits](point: ptr T) =
         debug "\t~> freed   git " & $typeof(point)
 
 proc free*[T: NimHeapGits](point: ptr T) =
+  ## perform a free of a nim-alloced pointer to git data
   if point == nil:
     when not defined(release) and not defined(danger):
       raise newException(Defect, "attempt to free nil nim heap git object")
@@ -577,23 +591,23 @@ proc free*[T: NimHeapGits](point: ptr T) =
       debug "\t~> freed   nim " & $typeof(point)
 
 proc free*(thing: sink GitThing) =
+  ## free a git thing and its gitobject contents appropriately
   assert thing != nil
-  withGit:
-    case thing.kind:
-    of goCommit:
-      free(cast[GitCommit](thing.o))
-    of goTree:
-      free(cast[GitTree](thing.o))
-    of goTag:
-      free(cast[GitTag](thing.o))
-    of {goAny, goInvalid, goBlob, goOfsDelta, goRefDelta}:
-      free(cast[GitObject](thing.o))
-    #disarm thing
+  case thing.kind:
+  of goCommit:
+    free(cast[GitCommit](thing.o))
+  of goTree:
+    free(cast[GitTree](thing.o))
+  of goTag:
+    free(cast[GitTag](thing.o))
+  of {goAny, goInvalid, goBlob, goOfsDelta, goRefDelta}:
+    free(cast[GitObject](thing.o))
+  #disarm thing
 
 proc free*(entries: sink GitTreeEntries) =
-  withGit:
-    for entry in entries.items:
-      free(entry)
+  ## git tree entries need a special free
+  for entry in entries.items:
+    free(entry)
 
 proc free*(s: string) =
   ## for template compatability only
@@ -645,49 +659,58 @@ proc url*(remote: GitRemote): Uri =
     result = parseUri($git_remote_url(remote)).normalizeUrl
 
 proc oid*(entry: GitTreeEntry): GitOid =
+  ## retrieve the oid of the input
   assert entry != nil
   result = git_tree_entry_id(entry)
   assert result != nil
 
 proc oid*(got: GitReference): GitOid =
+  ## retrieve the oid of the input
   assert got != nil
   result = git_reference_target(got)
   assert result != nil
 
 proc oid*(obj: GitObject): GitOid =
+  ## retrieve the oid of the input
   assert obj != nil
   result = git_object_id(obj)
   assert result != nil
 
 proc oid*(thing: GitThing): GitOid =
+  ## retrieve the oid of the input
   assert thing != nil and thing.o != nil
   result = thing.o.oid
   assert result != nil
 
 proc oid*(tag: GitTag): GitOid =
+  ## retrieve the oid of the input
   assert tag != nil
   result = git_tag_id(tag)
   assert result != nil
 
 func name*(got: GitReference): string =
+  ## retrieve the name of the input
   assert got != nil
   result = $git_reference_name(got)
 
 func name*(entry: GitTreeEntry): string =
+  ## retrieve the name of the input
   assert entry != nil
   result = $git_tree_entry_name(entry)
 
 func name*(remote: GitRemote): string =
+  ## retrieve the name of the input
   assert remote != nil
   result = $git_remote_name(remote)
 
 func isTag*(got: GitReference): bool =
+  ## true if the supplied reference is a tag
   assert got != nil
   result = git_reference_is_tag(got) == 1
 
 proc flags*(status: GitStatus): set[GitStatusFlag] =
-  assert status != nil
   ## produce the set of flags indicating the status of the file
+  assert status != nil
   for flag in validGitStatusFlags.items:
     if flag.ord.uint == bitand(status.status.uint, flag.ord.uint):
       result.incl flag
@@ -831,6 +854,7 @@ proc branchName*(got: GitReference): string =
       result = $name
 
 proc isBranch*(got: GitReference): bool =
+  ## true if the supplied reference is a branch
   assert got != nil
   withGit:
     result = git_reference_is_branch(got) == 1
@@ -858,16 +882,19 @@ proc setFlags[T](flags: seq[T] | set[T] | HashSet[T]): cuint =
     result = bitor(result, flag.ord.cuint).cuint
 
 proc message*(commit: GitCommit): string =
+  ## retrieve the message associated with a git commit
   assert commit != nil
   withGit:
     result = $git_commit_message(commit)
 
 proc message*(tag: GitTag): string =
+  ## retrieve the message associated with a git tag
   assert tag != nil
   withGit:
     result = $git_tag_message(tag)
 
 proc message*(thing: GitThing): string =
+  ## retrieve the message associated with a git thing
   assert thing != nil and thing.o != nil
   case thing.kind:
   of goTag:
@@ -884,6 +911,7 @@ proc summary*(commit: GitCommit): string =
     result = $git_commit_summary(commit)
 
 proc summary*(thing: GitThing): string =
+  ## produce a summary for a git thing
   assert thing != nil and thing.o != nil
   case thing.kind:
   of goTag:
@@ -927,21 +955,24 @@ proc free*(table: sink GitTagTable) =
     #disarm table
 
 proc hash*(oid: GitOid): Hash =
+  ## the hash of a git oid is a function of its string representation
   assert oid != nil
   var h: Hash = 0
   h = h !& hash($oid)
   result = !$h
 
 proc hash*(tag: GitTag): Hash =
+  ## two tags are the same if they have the same name
   assert tag != nil
   var h: Hash = 0
   h = h !& hash($tag)
   result = !$h
 
 proc hash*(thing: GitThing): Hash =
+  ## two git things are unique unless they share the same oid
   assert thing != nil
   var h: Hash = 0
-  h = h !& hash($thing.oid)
+  h = h !& hash(thing.oid)
   result = !$h
 
 proc commit*(thing: GitThing): GitCommit =
@@ -1064,6 +1095,7 @@ proc remoteCreate*(repo: GitRepository; name: string;
       result.ok remote
 
 proc `==`*(a, b: GitOid): bool =
+  ## compare two oids using libgit2's special method
   withGit:
     if a.isNil or b.isNil:
       result = false
@@ -1075,11 +1107,13 @@ proc `==`*(a, b: GitOid): bool =
       assert result == ($a == $b)
 
 proc targetId*(thing: GitThing): GitOid =
+  ## find the target oid to which a tag points
   withGit:
     result = git_tag_target_id(cast[GitTag](thing.o))
     assert result != nil
 
 proc target*(thing: GitThing): GitResult[GitThing] =
+  ## find the thing to which a tag points
   withGit:
     var
       obj: GitObject
@@ -1111,7 +1145,7 @@ proc lookupThing*(repo: GitRepository; name: string): GitResult[GitThing] =
       result.ok newThing(obj)
 
 proc newTagTable*(size = 32): GitTagTable =
-  ## instantiate a new table
+  ## instantiate a new tag table
   result = newOrderedTable[string, GitThing](size)
 
 proc addTag(tags: var GitTagTable; name: string;
@@ -1336,7 +1370,8 @@ proc treeEntryByPath*(thing: GitThing; path: string): GitResult[GitTreeEntry] =
     var
       leaf: GitTreeEntry
     # get the entry by path using the thing as a tree
-    withResultOf git_tree_entry_bypath(addr leaf, cast[GitTree](thing.o), path):
+    withResultOf git_tree_entry_bypath(addr leaf,
+                                       cast[GitTree](thing.o), path):
       try:
         # if it's okay, we have to make a copy of it that the user can free,
         # because when our thing is freed, it will invalidate the leaf var.
@@ -1428,7 +1463,8 @@ proc lookupCommit*(repo: GitRepository; oid: GitOid): GitResult[GitThing] =
       assert commit != nil
       result.ok newThing(commit)
 
-iterator revWalk*(repo: GitRepository; walker: GitRevWalker): GitResult[GitThing] =
+iterator revWalk*(repo: GitRepository;
+                  walker: GitRevWalker): GitResult[GitThing] =
   ## sic the walker on a repo starting with the given oid
   withGit:
     block:

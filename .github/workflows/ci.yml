@@ -53,6 +53,7 @@ jobs:
         run: |
           cd gittyup
           git fetch --all
+          nimble --accept install nimterop@0.6.12
           nimble --accept develop
           nimble test
 
