@@ -1689,7 +1689,6 @@ iterator commitsForSpec*(repo: GitRepository;
             yield Result[GitThing, GitResultCode].ok rev.get
           else:
             # we're not going to emit this revision, so free it
-            {.warning: "need var iteration".}
             #free rev.get
             if matched.isErr:
               # the matching process produced an error
