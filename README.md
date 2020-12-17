@@ -27,12 +27,15 @@ You need a libgit2 >= 1.0.0; I recommend one of these combinations of build
 flags:
 
 ```
---define:git2Git --define:git2SetVer="v1.0.1"  # build libraries from scratch
---define:git2JBB --define:git2SetVer="1.0.1"   # pre-built Julia Binaries
---define:git2Std --define:git2SetVer="1.0.1"   # use your system's libgit2
+# build libraries from scratch using the libgit2 repo
+--define:git2Git --define:git2SetVer="v1.0.1"
+# use your system's libgit2
+--define:git2Std --define:git2SetVer="1.0.1"
+# use pre-built Julia Binaries
+--define:git2JBB --define:git2SetVer="1.0.1"
 ```
 
-This gives some idea for the syntax at present:
+This gives some idea for the usage:
 
 ```nim
 import gittyup
