@@ -11,15 +11,19 @@ This is a _higher_-level and idiomatic abstraction for
 [nimgit2](https://github.com/genotrance/nimgit2) wrapper produced by
 [nimterop](https://github.com/nimterop/nimterop).
 
-## Installation
+## Support
 
-```
-$ nimph clone disruptek/gittyup
-```
-or if you're still using Nimble like it's 2012,
-```
-$ nimble install https://github.com/disruptek/gittyup
-```
+### cpp --cc:clang --define:git2Static
+
+Unsupported due to codegen bug.  Note that this generally includes MacOSX.
+
+### cpp --gc:arc
+
+Unsupported due to ARC codegen bug.
+
+### everything else
+
+Supported on Windows, OS X, Linux.
 
 ## Usage
 
@@ -78,15 +82,15 @@ block cloning:
 # repo is now out of scope and will be freed automatically
 ```
 
-## Tests
+## Installation
 
-### cpp --gc:arc
-
-Unsupported due to ARC codegen bug.
-
-### everything else
-
-Supported on Windows, OS X, Linux.
+```
+$ nimph clone gittyup
+```
+or if you're still using Nimble like it's 2012,
+```
+$ nimble install https://github.com/disruptek/gittyup
+```
 
 ## Documentation
 
