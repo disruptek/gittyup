@@ -7,7 +7,7 @@ requires "https://github.com/disruptek/badresults < 2.0.0"
 requires "https://github.com/disruptek/testes > 0.4.0 & < 1.0.0"
 
 # impose a limit on nimterop
-requires "nimterop <= 0.6.12"
+requires "nimterop <= 0.6.11"
 
 # fix poor nimble behavior
 requires "regex >= 0.15.0"

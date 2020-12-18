@@ -1,4 +1,3 @@
-import std/macros
 import std/strutils
 import std/uri
 import std/tables
@@ -54,13 +53,10 @@ template gitTrap*(code: GitResultCode) =
 testes:
   ## open the local repo
   test:
-    if not fileExists(getEnv"HOME" / ".gitconfig"):
-      when defined(windows):
-        skip "windows errors on missing .gitconfig"
-      else:
-        skip "all platforms error on missing .gitconfig"
-    else:
+    if fileExists(getEnv"HOME" / ".gitconfig"):
       check dumpError(grcOk) == ""
+    else:
+      skip "all platforms error on missing .gitconfig"
 
   ## repo state
   test:
@@ -106,7 +102,10 @@ testes:
     if "test" in tags:
       check repo.tagDelete("test") == grcOk
     else:
+      for s, tag in tags.pairs:
+        echo s, " -> ", tag.oid
       ## no test tag in the table
+    check "1.0.2" in tags
     check $tags["1.0.2"].oid == v102
 
   ## revision walk

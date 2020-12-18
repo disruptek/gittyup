@@ -52,8 +52,9 @@ jobs:
         shell: bash
         run: |
           cd gittyup
-          git fetch --all
-          nimble --accept install nimterop@0.6.12
+          git fetch --unshallow
+          git fetch --tags
+          nimble --accept install nimterop@0.6.11
           nimble --accept develop
           nimble test
 
