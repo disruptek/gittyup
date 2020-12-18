@@ -380,7 +380,7 @@ proc dumpError*(code: GitResultCode): string =
   if err != nil:
     result = $gec(err.klass) & " error: " & $err.message
     when defined(gitErrorsAreFatal):
-      raise newException(Defect, emsg)
+      raise newException(Defect, result)
 
 template dumpError() =
   let emsg = grcOk.dumpError
@@ -463,15 +463,20 @@ proc loadCerts(): bool =
     file = ""
   if not dirExists(dir):
     dir = ""
-  if file.len == 0 and dir.len == 0:
-    when defined(Linux):
+  # try to set a default for linux
+  when defined(Linux):
+    if (file, dir) == ("", ""):
       file = "/etc/ssl/certs/ca-certificates.crt"
-      if not fileExists(file):
-        return true
-    else:
+    if not fileExists(file):
       return true
+  # this seems to be helpful for git builds on linux, at least
+  if file != "" and dir == "":
+    dir = parentDir file
   result = git_libgit2_opts(
              GIT_OPT_SET_SSL_CERT_LOCATIONS.cint, file, dir) >= 0
+  # this is a little heavy-handed, but it might save someone some time
+  if not result:
+    dumpError()
 
 proc init*(): bool =
   ## initialize the library to prepare for git operations;

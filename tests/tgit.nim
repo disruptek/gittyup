@@ -54,7 +54,8 @@ testes:
   ## open the local repo
   test:
     if fileExists(getEnv"HOME" / ".gitconfig"):
-      check dumpError(grcOk) == ""
+      if dumpError(grcOk) != "":
+        fail dumpError(grcOk)
     else:
       skip "all platforms error on missing .gitconfig"
 
@@ -94,6 +95,7 @@ testes:
     oid := thing.tagCreate "test":
       fail dumpError(code)
     check repo.tagDelete("test") == grcOk
+    check repo.tagDelete("test") == grcNotFound
 
   ## tag table
   test:
