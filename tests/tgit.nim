@@ -25,7 +25,8 @@ let tmpdir = getTempDir() / "gittyup-" & $getCurrentProcessId() / ""
 
 template setup(): GitRepository =
   ## setup a repo for a test
-  check init()
+  if not init():
+    fail dumpError(grcOk)
   cleanup tmpdir
   let open = repositoryOpen getCurrentDir()
   check open.isOk

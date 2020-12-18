@@ -464,7 +464,7 @@ proc loadCerts(): bool =
   if not dirExists(dir):
     dir = ""
   # try to set a default for linux
-  when defined(Linux):
+  when defined(posix):
     if (file, dir) == ("", ""):
       file = "/etc/ssl/certs/ca-certificates.crt"
     if not fileExists(file):
@@ -478,23 +478,24 @@ proc loadCerts(): bool =
   if not result:
     dumpError()
 
+template initGit() =
+  result = git_libgit2_init() > 0
+  when defined(debugGit):
+    debug "git init"
+  when not defined(windows):
+    result = result and loadCerts()
+
 proc init*(): bool =
   ## initialize the library to prepare for git operations;
   ## returns true if libgit2 was initialized
   when defined(gitShutsDown):
-    result = git_libgit2_init() > 0
-    when defined(debugGit):
-      debug "git init"
+    initGit()
   else:
     block:
       once:
-        result = git_libgit2_init() > 0
-        when defined(debugGit):
-          debug "git init"
+        initGit()
         break
       result = true
-  once:
-    result = result and loadCerts()
 
 proc shutdown*(): bool =
   ## shutdown the library, freeing any libgit2 data;
