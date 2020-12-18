@@ -11,7 +11,13 @@ This is a _higher_-level and idiomatic abstraction for
 [nimgit2](https://github.com/genotrance/nimgit2) wrapper produced by
 [nimterop](https://github.com/nimterop/nimterop).
 
-## Support
+## Exceptional Support ... so to speak
+
+Supported on Linux, OS X, and Windows, with the following caveats:
+
+### nim-1.5.1 c --os:windows
+
+Unsupported due to apparent Nimterop issues.
 
 ### cpp --cc:clang --define:git2Static
 
@@ -20,10 +26,6 @@ Unsupported due to codegen bug.  Note that this generally includes MacOSX.
 ### cpp --gc:arc
 
 Unsupported due to ARC codegen bug.
-
-### everything else
-
-Supported on Windows, OS X, Linux.
 
 ## Usage
 
