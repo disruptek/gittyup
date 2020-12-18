@@ -29,14 +29,22 @@ Unsupported due to ARC codegen bug.
 
 ## Usage
 
-You need a libgit2 >= 1.0.0; I recommend one of these combinations of build
-flags:
+You need a `libgit2` >= `1.0.0` and `1.1.0` is the latest supported release; I
+recommend this combination of build flags:
 
 ```
 # build libraries from scratch using the libgit2 repo
---define:git2Git --define:git2SetVer="v1.0.1"
+--define:git2Git --define:git2SetVer="v1.1.0"
+```
+
+These don't work for me due to apparent Nimterop issues:
+```
 # use your system's libgit2
 --define:git2Std --define:git2SetVer="1.0.1"
+```
+
+These may be useful to provide SSH support on Windows:
+```
 # use pre-built Julia Binaries
 --define:git2JBB --define:git2SetVer="1.0.1"
 ```

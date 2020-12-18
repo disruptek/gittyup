@@ -21,6 +21,8 @@ elif git2SetVer == "v1.0.0":
   discard
 elif git2SetVer == "v1.0.1":
   discard
+elif git2SetVer == "v1.1.0":
+  discard
 elif git2SetVer == "1.0.1" and defined(git2JBB):
   discard
 elif git2SetVer == "1.0.0" and defined(git2JBB):
