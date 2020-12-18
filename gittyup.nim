@@ -477,14 +477,13 @@ proc loadCerts(): bool =
   # this is a little heavy-handed, but it might save someone some time
   if not result:
     dumpError()
-    echo dumpError(grcOk)
-    quit(1)
 
 template initGit() =
   result = git_libgit2_init() > 0
   when defined(debugGit):
     debug "git init"
-  result = result and loadCerts()
+  when not defined(windows):
+    result = result and loadCerts()
 
 proc init*(): bool =
   ## initialize the library to prepare for git operations;
