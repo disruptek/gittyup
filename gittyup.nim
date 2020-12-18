@@ -454,23 +454,24 @@ proc normalizeUrl(uri: Uri): Uri =
     result.hostname = "github.com"
     result.scheme = "ssh"
 
-proc loadCerts() =
+proc loadCerts(): bool =
   # https://github.com/wildart/julia/commit/2a59c5fcb579c76715f0015784b6a0a8ebda0c0c
   var
-    cfile = getEnv("SSL_CERT_FILE")
-    cdir = getEnv("SSL_CERT_DIR")
-  if not fileExists(cfile): cfile = ""
-  if not dirExists(cdir): cdir = ""
-  if cfile.len == 0 and cdir.len == 0:
+    file = getEnv("SSL_CERT_FILE")
+    dir = getEnv("SSL_CERT_DIR")
+  if not fileExists(file):
+    file = ""
+  if not dirExists(dir):
+    dir = ""
+  if file.len == 0 and dir.len == 0:
     when defined(Linux):
-      cfile = "/etc/ssl/certs/ca-certificates.crt"
-      if not fileExists(cfile):
-        return
+      file = "/etc/ssl/certs/ca-certificates.crt"
+      if not fileExists(file):
+        return true
     else:
-      return
-
-  discard git_libgit2_opts(
-    GIT_OPT_SET_SSL_CERT_LOCATIONS.cint, cfile.cstring, cdir.cstring)
+      return true
+  result = git_libgit2_opts(
+             GIT_OPT_SET_SSL_CERT_LOCATIONS.cint, file, dir) == 0
 
 proc init*(): bool =
   ## initialize the library to prepare for git operations;
@@ -487,7 +488,8 @@ proc init*(): bool =
           debug "git init"
         break
       result = true
-  once: loadCerts()
+  once:
+    result = result and loadCerts()
 
 proc shutdown*(): bool =
   ## shutdown the library, freeing any libgit2 data;
