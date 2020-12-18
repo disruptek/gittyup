@@ -102,8 +102,9 @@ testes:
     if "test" in tags:
       check repo.tagDelete("test") == grcOk
     else:
-      for s, tag in tags.pairs:
-        echo s, " -> ", tag.oid
+      when false:
+        for s, tag in tags.pairs:
+          echo s, " -> ", tag.oid
       ## no test tag in the table
     check "1.0.2" in tags
     check $tags["1.0.2"].oid == v102
