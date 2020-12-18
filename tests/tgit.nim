@@ -1,167 +1,158 @@
-import std/uri
+import std/macros
 import std/strutils
+import std/uri
+import std/tables
 import std/os
-import std/unittest
 
-import gittyup
+import gittyup except gitTrap
+import testes
 
 const
-  tagging = false
-  tagtable = false
-  specing = false
-  walking = true
   v1 = "555d5d803f1c63f3fad296ba844cd6f718861d0e"
   v102 = "372deb094fb11e56171e5c9785bd316577724f2e"
   v218 = "c245dde54a6ae6a35a914337e7303769af121f01"
   cloneme = parseURI"https://github.com/disruptek/gittyup"
 
-template cleanup(directory: string) =
+proc cleanup(directory: string) =
+  ## obliterate a temporary directory
   try:
-    removeDir(directory)
-    check not dirExists(directory)
+    removeDir directory
+    check not dirExists directory
   except OSError as e:
     echo "error removing ", directory
     echo "exception: ", e.msg
 
-suite "gittyup":
-  setup:
-    check init()
+let tmpdir = getTempDir() / "gittyup-" & $getCurrentProcessId() / ""
+
+template setup(): GitRepository =
+  ## setup a repo for a test
+  check init()
+  cleanup tmpdir
+  let open = repositoryOpen getCurrentDir()
+  check open.isOk
+  get open
+
+template teardown() {.dirty.} =
+  ## tear down a test repo
+  free repo
+  check shutdown()
+  cleanup tmpdir
+
+template test(body: untyped) =
+  ## perform a test with setup/teardown
+  var repo {.inject.} = setup()
+  try:
+    body
+  finally:
+    teardown()
+
+template gitTrap*(code: GitResultCode) =
+  ## trap an api result code, use it to fail spectacularly
+  if code != grcOk:
+    fail dumpError(code)
+
+testes:
+  ## open the local repo
+  test:
+    if not fileExists(getEnv"HOME" / ".gitconfig"):
+      when defined(windows):
+        skip "windows errors on missing .gitconfig"
+      else:
+        skip "all platforms error on missing .gitconfig"
+    else:
+      check dumpError(grcOk) == ""
+
+  ## repo state
+  test:
+    check repo.repositoryState == grsNone
+
+  ## get the head
+  test:
+    head := repo.repositoryHead:
+      fail dumpError(code)
+    let oid = head.oid
+    check $oid != ""
+
+  ## get a thing for 2.1.8
+  test:
+    thing := repo.lookupThing("2.1.8"):
+      fail dumpError(code)
+    check $thing.oid == v218
+
+  ## remote lookup
+  test:
+    origin := repo.remoteLookup("origin"):
+      fail dumpError(code)
+    check "gittyup" in origin.url.path
+
+  ## clone ourselves
+  test:
+    cloned := clone(cloneme, tmpdir):
+      fail dumpError(code)
+    check grsNone == repositoryState cloned
+
+  ## create and delete a tag
+  test:
+    thing := repo.lookupThing "HEAD":
+      fail dumpError(code)
+    oid := thing.tagCreate "test":
+      fail dumpError(code)
+    check repo.tagDelete("test") == grcOk
+
+  ## tag table
+  test:
+    tags := repo.tagTable:
+      fail dumpError(code)
+    if "test" in tags:
+      check repo.tagDelete("test") == grcOk
+    else:
+      ## no test tag in the table
+    check $tags["1.0.2"].oid == v102
+
+  ## revision walk
+  test:
+    # clone ourselves into tmpdir
+    cloned := cloneme.clone(tmpdir):
+      fail dumpError(code)
+    check grsNone == cloned.repositoryState
+
+    # we'll need a walker, and we'll want it freed
+    walker := cloned.newRevWalk:
+      fail dumpError(code)
+
+    # find the head
+    head := cloned.getHeadOid:
+      fail dumpError(code)
+
+    # start at the head
+    gitTrap walker.push(head)
+
+    # perform the walk
+    for rev in cloned.revWalk(walker):
+      check rev.isOk
+      #echo rev.get
+      #free rev.get
+
+  ## commits for spec
+  test:
+    cloned := cloneme.clone(tmpdir):
+      fail dumpError(code)
+    check grsNone == cloned.repositoryState
     let
-      tmpdir = getTempDir() / "gittyup-" & $getCurrentProcessId() / ""
-    tmpdir.cleanup
-    let
-      open = repositoryOpen(getCurrentDir())
-    check open.isOk
-    var repo = open.get
-    #checkpoint code.dumpError
-    #check false
-
-  teardown:
-    free repo
-    check shutdown()
-    tmpdir.cleanup
-
-  # both platforms error on missing .gitconfig
-  when false:
-    test "zero errors":
-        when defined(posix):
-          check grcOk.dumpError == ""
-        else:
-          # windows apparently errors on missing .gitconfig
-          check true
-
-  when true:
-    test "repo state":
-      check repo.repositoryState == grsNone
-
-    test "get the head":
-      head := repo.repositoryHead:
-        checkpoint code.dumpError
-        check false
-      let
-        oid = head.oid
-      check $oid != ""
-
-    test "get a thing for 2.1.8":
-      thing := repo.lookupThing("2.1.8"):
-        checkpoint code.dumpError
-        check false
-      check $thing.oid == v218
-
-    test "remote lookup":
-      origin := repo.remoteLookup("origin"):
-        checkpoint code.dumpError
-        check false
-      check "gittyup" in origin.url.path
-
-    test "clone something":
-      # clone ourselves into tmpdir
-      cloned := cloneme.clone(tmpdir):
-        checkpoint code.dumpError
-        check false
-      check grsNone == cloned.repositoryState
-
-  when tagging:
-    test "create and delete a tag":
-      block:
-        thing := repo.lookupThing "HEAD":
-          checkpoint code.dumpError
-          check false
-          break
-        oid := thing.tagCreate "test":
-          checkpoint code.dumpError
-          check false
-          break
-        check repo.tagDelete("test") == grcOk
-
-  when tagtable:
-    test "tag table":
-      block:
-        tags := repo.tagTable:
-          checkpoint code.dumpError
-          check false
-          break
-        if "test" in tags:
-          check repo.tagDelete("test") == grcOk
-        check $tags["1.0.2"].oid == v102
-
-  when walking:
-    test "revision walk":
-      block walking:
-        # clone ourselves into tmpdir
-        cloned := cloneme.clone(tmpdir):
-          checkpoint code.dumpError
-          check false
-        check grsNone == cloned.repositoryState
-
-        # we'll need a walker, and we'll want it freed
-        walker := cloned.newRevWalk:
-          checkpoint code.dumpError
-          check false
-          break walking
-
-        # find the head
-        head := cloned.getHeadOid:
-          checkpoint code.dumpError
-          check false
-          break walking
-
-        # start at the head
-        gitTrap walker.push(head):
-          check false
-          break walking
-
-        for rev in cloned.revWalk(walker):
-          check rev.isOk
-          #echo rev.get
-          #free rev.get
-
-  when specing:
-    test "commits for spec":
-      # clone ourselves into tmpdir
-      cloned := cloneme.clone(tmpdir):
-        checkpoint code.dumpError
-        check false
-      check grsNone == cloned.repositoryState
-      let
-        dotnimble = "gittyup.nim"
-      block found:
-        var
-          things: seq[GitThing] = @[]
-        proc dump(things: var seq[GitThing]): string =
-          for n in things.items:
-            if n != nil:
-              result &= $n & "\n"
-        for thing in cloned.commitsForSpec(@[dotnimble]):
-          echo "thing arrived"
-          check thing.isOk
-          if thing.isOk:
-            echo "adding...", thing.get
-            things.add thing.get
-        check things.len > 10
-        block found:
-          for thing in things.items:
-            if $thing.oid == v102:
-              break found
-            free thing
-          check false
+      dotnimble = "gittyup.nim"
+    var
+      things: seq[GitThing] = @[]
+    proc dump(things: var seq[GitThing]): string =
+      for n in things.items:
+        if n != nil:
+          result &= $n & "\n"
+    for thing in cloned.commitsForSpec(@[dotnimble]):
+      check thing.isOk
+      things.add thing.get
+    check things.len > 10
+    block found:
+      for thing in things.items:
+        if $thing.oid == v102:
+          break found
+        free thing
+      fail "unable to find v102"

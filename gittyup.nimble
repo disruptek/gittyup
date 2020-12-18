@@ -2,9 +2,9 @@ version = "2.5.7"
 author = "disruptek"
 description = "higher-level libgit2 bindings that build upon nimgit2"
 license = "MIT"
-requires "nim >= 1.0.4"
 requires "nimgit2 >= 0.3.1 & < 0.4.0"
 requires "https://github.com/disruptek/badresults < 2.0.0"
+requires "https://github.com/disruptek/testes > 0.4.0 & < 1.0.0"
 
 # impose a limit on nimterop
 requires "nimterop <= 0.6.12"
