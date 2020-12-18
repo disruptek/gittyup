@@ -471,7 +471,7 @@ proc loadCerts(): bool =
     else:
       return true
   result = git_libgit2_opts(
-             GIT_OPT_SET_SSL_CERT_LOCATIONS.cint, file, dir) == 0
+             GIT_OPT_SET_SSL_CERT_LOCATIONS.cint, file, dir) >= 0
 
 proc init*(): bool =
   ## initialize the library to prepare for git operations;
