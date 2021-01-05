@@ -4,7 +4,7 @@ import std/tables
 import std/os
 
 import gittyup except gitTrap
-import testes
+import testes except test
 
 const
   v1 = "555d5d803f1c63f3fad296ba844cd6f718861d0e"
