@@ -4,7 +4,7 @@ import std/tables
 import std/os
 
 import gittyup except gitTrap
-import testes except test
+import balls except test
 
 const
   v1 = "555d5d803f1c63f3fad296ba844cd6f718861d0e"
@@ -51,7 +51,7 @@ template gitTrap*(code: GitResultCode) =
   if code != grcOk:
     fail dumpError(code)
 
-testes:
+suite "giddy up, pardner":
   ## open the local repo
   test:
     if fileExists(getEnv"HOME" / ".gitconfig"):

@@ -4,7 +4,9 @@ description = "higher-level libgit2 bindings that build upon nimgit2"
 license = "MIT"
 requires "nimgit2 >= 0.3.1 & < 0.4.0"
 requires "https://github.com/disruptek/badresults < 2.0.0"
-requires "https://github.com/disruptek/testes > 0.4.0 & < 1.0.0"
+
+when not defined(release):
+  requires "https://github.com/disruptek/balls >= 2.0.0 & < 3.0.0"
 
 # impose a limit on nimterop
 requires "nimterop <= 0.6.11"
@@ -12,30 +14,10 @@ requires "nimterop <= 0.6.11"
 # fix poor nimble behavior
 requires "regex >= 0.15.0"
 
-proc execCmd(cmd: string) =
-  echo "execCmd:" & cmd
-  exec cmd
-
-proc execTest(test: string) =
-  when getEnv("GITHUB_ACTIONS", "false") != "true":
-    execCmd "nim c   -d:git2Git -d:git2SetVer=\"v1.1.0\" -r " & test
-    #execCmd "nim c   -d:git2JBB -d:git2SetVer=\"1.1.0\"  -r " & test
-  else:
-    execCmd "nim c   -d:git2Git -d:git2SetVer=\"v1.1.0\" -r " & test
-    #execCmd "nim c   -d:git2JBB -d:git2SetVer=\"1.1.0\"  -r " & test
-    execCmd "nim c   -d:git2Static -d:git2Git -d:git2SetVer=\"v1.1.0\" -r " & test
-    execCmd "nim cpp -d:git2Git -d:git2SetVer=\"v1.1.0\" -r " & test
-    #execCmd "nim cpp -d:git2JBB -d:git2SetVer=\"1.1.0\"  -r " & test
-    when not defined(macosx):
-      execCmd "nim cpp -d:git2Static -d:git2Git -d:git2SetVer=\"v1.1.0\"  -r " & test
-    when (NimMajor, NimMinor) >= (1, 2):
-      execCmd "nim c   -d:git2Git -d:git2SetVer=\"v1.1.0\" --gc:arc -r " & test
-      #execCmd "nim c   -d:git2JBB -d:git2SetVer=\"1.1.0\" -d:danger --gc:arc -r " & test
-      when not defined(macosx):
-        execCmd "nim c   -f -d:git2Static -d:git2Git -d:git2SetVer=\"v1.1.0\" -d:danger --gc:arc " & test
-      #execCmd "nim cpp -f -d:git2Git -d:git2SetVer=\"v1.1.0\" --gc:arc -r " & test
-      #execCmd "nim cpp -f -d:git2JBB -d:git2SetVer=\"1.1.0\" -d:danger --gc:arc -r " & test
-      #execCmd "nim cpp -f -d:git2Static -d:git2Git -d:git2SetVer=\"v1.1.0\" -d:danger --gc:arc -r " & test
-
 task test, "run tests for ci":
-  execTest("tests/tgit.nim")
+  when defined(windows):
+    exec """balls.cmd --d:git2Git --d:git2SetVer="v1.1.0""""
+    exec """balls.cmd --d:git2Git --d:git2SetVer="v1.1.0" --d:git2Static"""
+  else:
+    exec """balls --d:git2Git --d:git2SetVer="v1.1.0""""
+    exec """balls --d:git2Git --d:git2SetVer="v1.1.0" --d:git2Static"""
