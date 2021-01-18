@@ -1,4 +1,4 @@
-version = "2.6.0"
+version = "2.6.1"
 author = "disruptek"
 description = "higher-level libgit2 bindings that build upon nimgit2"
 license = "MIT"
