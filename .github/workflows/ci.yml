@@ -26,14 +26,14 @@ jobs:
       fail-fast: false
       matrix:
         os: ['macos-latest', 'ubuntu-latest']
-        nim: ['devel', 'version-1-4', 'version-1-2', 'version-1-0']
+        nim: ['devel', 'version-1-4', 'version-1-2']
     name: '${{ matrix.os }} (${{ matrix.nim }})'
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          path: gittyup
+          path: ci
 
       - name: Setup Nim
         uses: alaviss/setup-nim@0.1.1
@@ -44,7 +44,7 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          cd gittyup
+          cd ci
           git fetch --unshallow
           nimble --accept install nimterop@0.6.11
           nimble --accept develop
@@ -54,7 +54,7 @@ jobs:
         if: ${{ matrix.docs }} == 'true'
         shell: bash
         run: |
-          cd gittyup
+          cd ci
           branch=${{ github.ref }}
           branch=${branch##*/}
           nimble doc --project --outdir:docs \
@@ -71,6 +71,6 @@ jobs:
           matrix.os == 'ubuntu-latest' && matrix.nim == 'devel'
         uses: crazy-max/ghaction-github-pages@v1
         with:
-          build_dir: gittyup/docs
+          build_dir: ci/docs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
