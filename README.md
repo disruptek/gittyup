@@ -23,24 +23,20 @@ Unsupported due to apparent Nimterop issues.
 
 Unsupported due to codegen bug.  Note that this generally includes MacOSX.
 
-### cpp --gc:arc
-
-Unsupported due to ARC codegen bug.
-
 ## Usage
 
-You need a `libgit2` >= `1.0.0` and `1.1.0` is the latest supported release; I
+You need a `libgit2` >= `1.0.0` and `1.1.1` is the latest supported release; I
 recommend this combination of build flags:
 
 ```
 # build libraries from scratch using the libgit2 repo
---define:git2Git --define:git2SetVer="v1.1.0"
+--define:git2Git --define:git2SetVer="v1.1.1"
 ```
 
 These don't work for me due to apparent Nimterop issues:
 ```
 # use your system's libgit2
---define:git2Std --define:git2SetVer="1.0.1"
+--define:git2Std --define:git2SetVer="1.1.1"
 ```
 
 These may be useful to provide SSH support on Windows:
