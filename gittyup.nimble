@@ -8,8 +8,9 @@ requires "https://github.com/disruptek/badresults >= 2.0.0 & < 3.0.0"
 when not defined(release):
   requires "https://github.com/disruptek/balls >= 2.0.0 & < 4.0.0"
 
-# impose a limit on nimterop
-requires "nimterop <= 0.6.11"
+# impose a limit on nimterop; removed this because nimble doesn't
+# understand that dependencies may have different versions...  🙄
+#requires "nimterop <= 0.6.11"
 
 # fix poor nimble behavior
 requires "regex >= 0.15.0"
