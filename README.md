@@ -23,6 +23,11 @@ Unsupported due to apparent Nimterop issues.
 
 Unsupported due to codegen bug.  Note that this generally includes MacOSX.
 
+### --define:git2Static
+
+We don't run it in CI because we don't have a static SSL library there at the
+moment, but it probably works if you have such an animal on your system.
+
 ## Usage
 
 You need a `libgit2` >= `1.0.0` and `1.1.1` is the latest supported release; I

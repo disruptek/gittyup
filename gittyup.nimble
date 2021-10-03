@@ -18,7 +18,7 @@ requires "regex >= 0.15.0"
 task test, "run tests for ci":
   when defined(windows):
     exec """balls.cmd -d:git2Git -d:git2SetVer="v1.1.1""""
-    exec """balls.cmd -d:git2Git -d:git2SetVer="v1.1.1" -d:git2Static"""
+    #exec """balls.cmd -d:git2Git -d:git2SetVer="v1.1.1" -d:git2Static"""
   else:
     exec """balls -d:git2Git -d:git2SetVer="v1.1.1""""
-    exec """balls -d:git2Git -d:git2SetVer="v1.1.1" -d:git2Static"""
+    #exec """balls -d:git2Git -d:git2SetVer="v1.1.1" -d:git2Static"""
