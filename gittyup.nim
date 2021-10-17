@@ -12,29 +12,6 @@ import std/hashes
 import std/tables
 import std/uri
 
-const
-  git2SetVer {.strdefine, used.} = "v1.0.1"
-
-when git2SetVer == "master":
-  discard
-elif git2SetVer == "v1.0.0":
-  discard
-elif git2SetVer == "v1.0.1":
-  discard
-elif git2SetVer == "v1.1.0":
-  discard
-elif git2SetVer == "v1.1.1":
-  discard
-elif git2SetVer == "1.0.1" and defined(git2JBB):
-  discard
-elif git2SetVer == "1.0.0" and defined(git2JBB):
-  discard
-elif git2SetVer == "1.1.0" and defined(git2JBB):
-  discard
-elif not defined(debugGit):
-  {.warning: "libgit2 version `" & git2SetVer & "` unsupported".}
-
-#import nimgit2
 import hlibgit2/strarray
 import hlibgit2/types
 import hlibgit2/buffer
@@ -67,8 +44,6 @@ export badresults
 when not compiles(git_strarray_dispose):
   template git_strarray_dispose(arr: ptr git_strarray) =
     git_strarray_free(arr)
-
-{.hint: "libgit2 version `" & git2SetVer & "`".}
 
 type
   # separating out stuff we free via routines from libgit2
@@ -415,8 +390,8 @@ proc free*[T: GitHeapGits](point: ptr T) =
 proc free*[T: NimHeapGits](point: ptr T) =
   ## perform a free of a nim-alloced pointer to git data
   if point == nil:
-    when not defined(release) and not defined(danger):
-      raise newException(Defect, "attempt to free nil nim heap git object")
+    when not defined(release) or not defined(danger):
+      raise Defect.newException "attempt to free nil nim heap git object"
   else:
     when defined(debugGit):
       debug "\t~> freeing nim " & $typeof(point)
