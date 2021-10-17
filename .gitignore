@@ -2,3 +2,4 @@ nim.cfg
 nimblemeta.json
 bin
 deps
+run\ nimble\ test
