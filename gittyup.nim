@@ -60,28 +60,16 @@ type
   GitTreeWalkCallback* = proc (root: cstring; entry: ptr git_tree_entry;
                                payload: pointer): cint
 
-  GitObjectKind* = enum
-    # we have to add 2 here to satisfy nim; discriminants.low must be zero
-    goAny         = (2 + GIT_OBJECT_ANY.ord, "object")        # -2
-    goInvalid     = (2 + GIT_OBJECT_INVALID.ord, "invalid")   # -1
-    # this space intentionally left blank
-    goCommit      = (2 + GIT_OBJECT_COMMIT.ord, "commit")     #  1
-    goTree        = (2 + GIT_OBJECT_TREE.ord, "tree")         #  2
-    goBlob        = (2 + GIT_OBJECT_BLOB.ord, "blob")         #  3
-    goTag         = (2 + GIT_OBJECT_TAG.ord, "tag")           #  4
-    # this space intentionally left blank
-    goOfsDelta    = (2 + GIT_OBJECT_OFS_DELTA.ord, "ofs")     #  6
-    goRefDelta    = (2 + GIT_OBJECT_REF_DELTA.ord, "ref")     #  7
-
+  GitObjectKind* = git_object_t
   GitThing* = ref object
     o*: GitObject
     # we really don't have anything else to say about these just yet
-    case kind*: GitObjectKind:
-    of goTag:
+    case kind*: GitObjectKind
+    of GIT_OBJECT_TAG:
       discard
-    of goRefDelta:
+    of GIT_OBJECT_REF_DELTA:
       discard
-    of goTree:
+    of GIT_OBJECT_TREE:
       discard
     else:
       discard
@@ -155,7 +143,7 @@ const
     GIT_CHECKOUT_DONT_OVERWRITE_IGNORED,
   ].toHashSet
 
-  commonDefaultStatusFlags: set[GitStatusOption] = {
+  commonDefaultStatusFlags = {
     GIT_STATUS_OPT_INCLUDE_UNTRACKED,
     GIT_STATUS_OPT_INCLUDE_IGNORED,
     GIT_STATUS_OPT_INCLUDE_UNMODIFIED,
@@ -403,13 +391,14 @@ proc free*(thing: sink GitThing) =
   ## free a git thing and its gitobject contents appropriately
   assert thing != nil
   case thing.kind:
-  of goCommit:
+  of GIT_OBJECT_COMMIT:
     free(cast[GitCommit](thing.o))
-  of goTree:
+  of GIT_OBJECT_TREE:
     free(cast[GitTree](thing.o))
-  of goTag:
+  of GIT_OBJECT_TAG:
     free(cast[GitTag](thing.o))
-  of {goAny, goInvalid, goBlob, goOfsDelta, goRefDelta}:
+  of GIT_OBJECT_ANY, GIT_OBJECT_INVALID, GIT_OBJECT_BLOB,
+     GIT_OBJECT_OFS_DELTA, GIT_OBJECT_REF_DELTA:
     free(cast[GitObject](thing.o))
   #disarm thing
 
@@ -422,24 +411,13 @@ proc free*(s: string) =
   ## for template compatability only
   discard
 
-func kind(obj: GitObject): GitObjectKind =
-  ## fetch the GitObjectKind of a git object
-  assert obj != nil
-  assert GitObjectKind.low == goAny
-  result = GitObjectKind(git_object_type(obj).ord - GIT_OBJECT_ANY.ord)
-  if validGitObjectKinds * {result} == {}:
-    result = goInvalid
+proc kind(obj: GitObject | GitCommit | GitTag): GitObjectKind =
+  git_object_type(cast[GitObject](obj))
 
 proc newThing(obj: GitObject | GitCommit | GitTag): GitThing =
   ## turn a git object into a thing
   assert obj != nil
-  when true:
-    result = GitThing(kind: cast[GitObject](obj).kind, o: cast[GitObject](obj))
-  else:
-    try:
-      result = GitThing(kind: cast[GitObject](obj).kind, o: cast[GitObject](obj))
-    except:
-      result = GitThing(kind: goAny, o: cast[GitObject](obj))
+  GitThing(kind: obj.kind, o: cast[GitObject](obj))
 
 proc newThing(thing: GitThing): GitThing =
   ## turning a thing into a thing involves no change
@@ -587,7 +565,7 @@ func `$`*(obj: GitObject): string =
   let
     kind = obj.kind
   case kind:
-  of goInvalid:
+  of GIT_OBJECT_INVALID:
     result = "{invalid}"
   else:
     result = $kind & "-" & $obj.git_object_id
@@ -620,14 +598,14 @@ proc copy*(thing: GitThing): GitResult[GitThing] =
   ## create a copy of the thing; free it with free
   assert thing != nil and thing.o != nil
   case thing.kind:
-  of goInvalid:
+  of GIT_OBJECT_INVALID:
     result.err GIT_EINVALID
-  of goCommit:
+  of GIT_OBJECT_COMMIT:
     var
       dupe: GitCommit
     withResultOf git_commit_dup(addr dupe, cast[GitCommit](thing.o)):
       result.ok newThing(dupe)
-  of goTag:
+  of GIT_OBJECT_TAG:
     var
       dupe: GitTag
     withResultOf git_tag_dup(addr dupe, cast[GitTag](thing.o)):
@@ -706,9 +684,9 @@ proc message*(thing: GitThing): string =
   ## retrieve the message associated with a git thing
   assert thing != nil and thing.o != nil
   case thing.kind:
-  of goTag:
+  of GIT_OBJECT_TAG:
     result = cast[GitTag](thing.o).message
-  of goCommit:
+  of GIT_OBJECT_COMMIT:
     result = cast[GitCommit](thing.o).message
   else:
     raise newException(ValueError, "dunno how to get a message: " & $thing)
@@ -723,9 +701,9 @@ proc summary*(thing: GitThing): string =
   ## produce a summary for a git thing
   assert thing != nil and thing.o != nil
   case thing.kind:
-  of goTag:
+  of GIT_OBJECT_TAG:
     result = cast[GitTag](thing.o).message
-  of goCommit:
+  of GIT_OBJECT_COMMIT:
     result = cast[GitCommit](thing.o).summary
   else:
     raise newException(ValueError, "dunno how to get a summary: " & $thing)
@@ -786,19 +764,19 @@ proc hash*(thing: GitThing): Hash =
 
 proc commit*(thing: GitThing): GitCommit =
   ## turn a thing into its commit
-  assert thing != nil and thing.kind == goCommit
+  assert thing != nil and thing.kind == GIT_OBJECT_COMMIT
   result = cast[GitCommit](thing.o)
   assert result != nil
 
 proc committer*(thing: GitThing): GitSignature =
   ## get the committer of a thing that's a commit
-  assert thing != nil and thing.kind == goCommit
+  assert thing != nil and thing.kind == GIT_OBJECT_COMMIT
   result = git_commit_committer(cast[GitCommit](thing.o))
   assert result != nil
 
 proc author*(thing: GitThing): GitSignature =
   ## get the author of a thing that's a commit
-  assert thing != nil and thing.kind == goCommit
+  assert thing != nil and thing.kind == GIT_OBJECT_COMMIT
   result = git_commit_author(cast[GitCommit](thing.o))
   assert result != nil
 
@@ -965,7 +943,7 @@ proc addTag(tags: var GitTagTable; name: string;
             thing: var GitThing): GitResultCode =
   ## add a thing to the tag table, perhaps peeling it first
   # if it's not a tag, just add it to the table and move on
-  if thing.kind != goTag:
+  if thing.kind != GIT_OBJECT_TAG:
     # no need to peel this thing
     tags[name] = thing
     result = GIT_OK
@@ -1061,7 +1039,7 @@ iterator status*(repository: GitRepository; show: GitStatusShow;
           break
 
         # add the options specified by the user
-        options.show = cast[git_status_show_t](show)
+        options.show = show.to_c_git_status_show_t
         for flag in flags.items:
           options.flags = bitand(options.flags.uint, flag.ord.uint).cuint
 
