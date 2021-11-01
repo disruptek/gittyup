@@ -122,9 +122,12 @@ export git_branch_t
 export git_pathspec_flag_t
 
 # these just cast some cints into appropriate enums
-template grc(code: cint): GitResultCode = cast[GitResultCode](code.ord)
+template grc(code: cint): GitResultCode =
+  to_git_error_code(cast[c_git_error_code](code))
+
 template grc(code: GitResultCode): GitResultCode = code
-template gec(code: cint): GitErrorClass = cast[GitErrorClass](code.ord)
+template gec(code: cint): GitErrorClass =
+  to_git_error_t(cast[c_git_error_t](code))
 
 proc hash*(gcs: GitCheckoutStrategy): Hash =
   ## too large an enum for native sets
@@ -165,7 +168,10 @@ const
 proc dumpError*(code: GitResultCode): string =
   ## retrieves the last git error message
   let err = git_error_last()
-  if err != nil:
+  if err == nil:
+    result = "error: " & $GIT_EAPPLYFAIL
+
+  else:
     result = $gec(err.klass) & " error: " & $err.message
     when defined(gitErrorsAreFatal):
       raise newException(Defect, result)
@@ -260,15 +266,17 @@ proc loadCerts(): bool =
   # this seems to be helpful for git builds on linux, at least
   if file != "" and dir == "":
     dir = parentDir file
-  when false:
-    result = git_libgit2_opts(
-               GIT_OPT_SET_SSL_CERT_LOCATIONS.cint, file, dir) >= 0
+  result = git_libgit2_opts(
+             GIT_OPT_SET_SSL_CERT_LOCATIONS.cint, 
+             file.cstring, dir.cstring) >= 0
   # this is a little heavy-handed, but it might save someone some time
   if not result:
     dumpError()
 
-template initGit() =
-  result = git_libgit2_init() > 0
+
+proc initGit(): bool =
+  let code = git_libgit2_init()
+  result = code > 0
   when defined(debugGit):
     debug "git init"
   when not defined(windows):
@@ -278,12 +286,12 @@ proc init*(): bool =
   ## initialize the library to prepare for git operations;
   ## returns true if libgit2 was initialized
   when defined(gitShutsDown):
-    initGit()
+    return initGit()
   else:
     block:
       once:
-        initGit()
-        break
+        return initGit()
+
       result = true
 
 proc shutdown*(): bool =
@@ -411,7 +419,7 @@ proc free*(s: string) =
   ## for template compatability only
   discard
 
-proc kind(obj: GitObject | GitCommit | GitTag): GitObjectKind =
+proc kind*(obj: GitObject | GitCommit | GitTag): GitObjectKind =
   git_object_type(cast[GitObject](obj))
 
 proc newThing(obj: GitObject | GitCommit | GitTag): GitThing =
@@ -689,7 +697,10 @@ proc message*(thing: GitThing): string =
   of GIT_OBJECT_COMMIT:
     result = cast[GitCommit](thing.o).message
   else:
-    raise newException(ValueError, "dunno how to get a message: " & $thing)
+    raise newException(
+      ValueError,
+      "Cannot get message for git object " &
+        $thing & " (kind was '" & $thing.kind & "')")
 
 proc summary*(commit: GitCommit): string =
   ## produce a summary for a given commit
@@ -706,7 +717,11 @@ proc summary*(thing: GitThing): string =
   of GIT_OBJECT_COMMIT:
     result = cast[GitCommit](thing.o).summary
   else:
-    raise newException(ValueError, "dunno how to get a summary: " & $thing)
+    raise newException(
+      ValueError,
+      "Cannot get summary for git object " &
+        $thing & " (kind was '" & $thing.kind & "')")
+
   result = result.strip
 
 proc free*(table: sink GitTagTable) =
@@ -795,7 +810,7 @@ proc clone*(uri: Uri; path: string; branch = ""): GitResult[GitRepository] =
           options.checkout_branch = branch
         var
           repo: GitRepository
-        withResultOf git_clone(addr repo, $uri, path, options):
+        withResultOf git_clone(addr repo, cstring($uri), path, options):
           assert repo != nil
           result.ok repo
     finally:
@@ -821,9 +836,10 @@ proc setHeadDetached*(repo: GitRepository; reference: string): GitResultCode =
 proc repositoryOpen*(path: string): GitResult[GitRepository] =
   ## open a repository by path; the repository must be freed
   withGit:
-    var
-      repo: GitRepository
-    withResultOf git_repository_open(addr repo, path):
+    var repo: GitRepository
+
+    let code = git_repository_open(addr repo, path)
+    withResultOf code:
       assert repo != nil
       result.ok repo
 
@@ -881,7 +897,7 @@ proc remoteCreate*(repo: GitRepository; name: string;
   withGit:
     var
       remote: GitRemote
-    withResultOf git_remote_create(addr remote, repo, name, $url):
+    withResultOf git_remote_create(addr remote, repo, name.cstring, cstring($url)):
       assert remote != nil
       result.ok remote
 
@@ -930,9 +946,10 @@ proc tagList*(repo: GitRepository): GitResult[seq[string]] =
 proc lookupThing*(repo: GitRepository; name: string): GitResult[GitThing] =
   ## try to look some thing up in the repository with the given name
   withGit:
-    var
-      obj: GitObject
-    withResultOf git_revparse_single(addr obj, repo, name):
+    var obj: GitObject
+    let res = git_revparse_single(addr obj, repo, name)
+    withResultOf res:
+      assert obj.kind != GIT_OBJECT_INVALID
       result.ok newThing(obj)
 
 proc newTagTable*(size = 32): GitTagTable =
@@ -964,8 +981,7 @@ proc addTag(tags: var GitTagTable; name: string;
 proc tagTable*(repo: GitRepository): GitResult[GitTagTable] =
   ## compose a table of tags and their associated references
   block:
-    let
-      names = repo.tagList
+    let names = repo.tagList
     # if we cannot fetch a tag list,
     if names.isErr:
       result.err names.error
@@ -1196,8 +1212,8 @@ proc treeWalk*(tree: GitTree; mode: git_treewalk_mode; callback: git_treewalk_cb
                payload: pointer): git_error_code =
   ## walk a tree and run a callback on every entry
   withGit:
-    result = git_tree_walk(tree, cast[git_treewalk_mode](mode.ord.cint),
-                           callback, payload).grc
+    result = git_tree_walk(
+      tree, to_c_git_treewalk_mode(mode), callback, payload).grc
 
 proc treeWalk*(tree: GitTree; mode: git_treewalk_mode): GitResult[GitTreeEntries] =
   ## try to walk a tree and return a sequence of its entries
@@ -1569,7 +1585,7 @@ iterator branches*(repo: GitRepository;
 
   withGit:
     let
-      list =
+      list = to_c_git_branch_t():
         # i know this is cookin' your noodle, but
         if GIT_BRANCH_LOCAL notin flags:
           GIT_BRANCH_REMOTE
@@ -1584,6 +1600,7 @@ iterator branches*(repo: GitRepository;
         iter: ptr git_branch_iterator
         # create an iterator
         code = git_branch_iterator_new(addr iter, repo, list).grc
+
       # if we couldn't create the iterator,
       if code != GIT_OK:
         # then emit the error and bail
@@ -1598,7 +1615,9 @@ iterator branches*(repo: GitRepository;
         var
           branch: GitReference = nil
         # depending on whether we were able to advance,
-        code = git_branch_next(addr branch, unsafeAddr list, iter).grc
+        code = git_branch_next(
+          addr branch, unsafeAddr list, iter).grc
+
         case code:
         of GIT_OK:
           assert branch != nil
@@ -1718,8 +1737,9 @@ proc repositoryDiscover*(path: string; ceilings: seq[string] = @[];
     # "4096 bytes oughta be enough for anybody"
     withResultOf git_buf_grow(addr buff, 4096.cuint):
       try:
-        withResultOf git_repository_discover(addr buff, path, xfs.cint,
-                                             ceilings.join(sep)):
+        withResultOf git_repository_discover(
+          addr buff, path.cstring, xfs.cint, ceilings.join(sep).cstring):
+
           result.ok $buff
       finally:
         git_buf_dispose(addr buff)
