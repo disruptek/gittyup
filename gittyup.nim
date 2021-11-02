@@ -267,7 +267,7 @@ proc loadCerts(): bool =
   if file != "" and dir == "":
     dir = parentDir file
   result = git_libgit2_opts(
-             GIT_OPT_SET_SSL_CERT_LOCATIONS.cint, 
+             GIT_OPT_SET_SSL_CERT_LOCATIONS.cint,
              file.cstring, dir.cstring) >= 0
   # this is a little heavy-handed, but it might save someone some time
   if not result:
@@ -805,7 +805,7 @@ proc clone*(uri: Uri; path: string; branch = ""): GitResult[GitRepository] =
         withResultOf git_clone_options_init(options, GIT_CLONE_OPTIONS_VERSION):
           discard
       ]#
-      withResultOf git_clone_options_init(options, 11):
+      withResultOf git_clone_options_init(options, 1):
         if branch != "":
           options.checkout_branch = branch
         var
