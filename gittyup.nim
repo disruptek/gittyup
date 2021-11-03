@@ -40,6 +40,11 @@ import hlibgit2/signature
 import badresults
 export badresults
 
+const
+  GIT_DIFF_OPTIONS_VERSION* = 1
+  GIT_STATUS_OPTIONS_VERSION* = 1
+  GIT_CHECKOUT_OPTIONS_VERSION* = 1
+
 # git_strarray_dispose replaces git_strarray_free in >v1.0.1
 when not compiles(git_strarray_dispose):
   template git_strarray_dispose(arr: ptr git_strarray) =
@@ -168,10 +173,7 @@ const
 proc dumpError*(code: GitResultCode): string =
   ## retrieves the last git error message
   let err = git_error_last()
-  if err == nil:
-    result = "error: " & $GIT_EAPPLYFAIL
-
-  else:
+  if err != nil:
     result = $gec(err.klass) & " error: " & $err.message
     when defined(gitErrorsAreFatal):
       raise newException(Defect, result)
@@ -1045,10 +1047,8 @@ iterator status*(repository: GitRepository; show: GitStatusShow;
 
       block:
         var
-          #code = git_status_options_init(options,
-          #                               GIT_STATUS_OPTIONS_VERSION).grc
           code = git_status_options_init(options,
-                                         11).grc
+                                        GIT_STATUS_OPTIONS_VERSION).grc
         if code != GIT_OK:
           # throw the error code
           yield Result[GitStatus, GitResultCode].err(code)
@@ -1106,10 +1106,8 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
         commit.free
 
       # setup our checkout options
-      #result = git_checkout_options_init(options,
-      #                                   GIT_CHECKOUT_OPTIONS_VERSION).grc
       result = git_checkout_options_init(options,
-                                         11).grc
+                                        GIT_CHECKOUT_OPTIONS_VERSION).grc
       if result != GIT_OK:
         break
 
@@ -1146,10 +1144,8 @@ proc checkoutHead*(repo: GitRepository;
       options = cast[ptr git_checkout_options](sizeof(git_checkout_options).alloc)
     try:
       # setup our checkout options
-      #withResultOf git_checkout_options_init(options,
-      #                                       GIT_CHECKOUT_OPTIONS_VERSION):
-      withResultOf git_checkout_options_init(options,
-                                             11):
+      withResultOf git_checkout_options_init(
+        options, GIT_CHECKOUT_OPTIONS_VERSION):
         # reset the strategy per flags
         options.checkout_strategy = setFlags(strategy)
 
@@ -1458,10 +1454,7 @@ iterator commitsForSpec*(repo: GitRepository;
 
     block steve:
       let
-        #code = git_diff_options_init(options,
-        #                             GIT_DIFF_OPTIONS_VERSION).grc
-        code = git_diff_options_init(options,
-                                     11).grc
+        code = git_diff_options_init(options, GIT_DIFF_OPTIONS_VERSION).grc
       if code != GIT_OK:
         yield err[GitThing](code)
         break steve

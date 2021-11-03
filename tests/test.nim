@@ -57,6 +57,7 @@ suite "giddy up, pardner":
     if fileExists(getEnv"HOME" / ".gitconfig"):
       if dumpError(GIT_OK) != "":
         fail dumpError(GIT_OK)
+
     else:
       skip "all platforms error on missing .gitconfig"
 
@@ -149,9 +150,11 @@ suite "giddy up, pardner":
       for n in things.items:
         if n != nil:
           result &= $n & "\n"
+
     for thing in cloned.commitsForSpec(@[dotnimble]):
       check thing.isOk
       things.add thing.get
+
     check things.len > 10
     block found:
       for thing in things.items:
