@@ -41,12 +41,16 @@ jobs:
           path: nim
           version: ${{ matrix.nim }}
 
+      - name: Setup libgit
+        if: ${{ matrix.os }} == 'ubuntu-latest'
+        run:
+          sudo apt-get install -y libgit2-dev
+
       - name: Run tests
         shell: bash
         run: |
           cd ci
           git fetch --unshallow
-          nimble --accept install nimterop@0.6.11
           nimble --accept develop
           nimble test
 

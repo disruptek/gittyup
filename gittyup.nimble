@@ -11,8 +11,8 @@ when not defined(release):
 
 task test, "run tests for ci":
   when defined(windows):
-    exec """balls.cmd -d:git2Git -d:git2SetVer="v1.1.1""""
+    exec """balls.cmd"""
     #exec """balls.cmd -d:git2Git -d:git2SetVer="v1.1.1" -d:git2Static"""
   else:
-    exec """balls -d:git2Git -d:git2SetVer="v1.1.1""""
+    exec """balls"""
     #exec """balls -d:git2Git -d:git2SetVer="v1.1.1" -d:git2Static"""
