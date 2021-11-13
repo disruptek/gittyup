@@ -14,5 +14,5 @@ task test, "run tests for ci":
     exec """balls.cmd"""
     #exec """balls.cmd -d:git2Git -d:git2SetVer="v1.1.1" -d:git2Static"""
   else:
-    exec """balls"""
+    exec "balls --passc:-I/usr/include"
     #exec """balls -d:git2Git -d:git2SetVer="v1.1.1" -d:git2Static"""
