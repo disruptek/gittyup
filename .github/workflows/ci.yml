@@ -46,19 +46,23 @@ jobs:
         shell: bash
         run: |
           cd ci
-          pip install --user conan
-          source ~/.profile
-
-          conan install . --build=missing
-
           git fetch --unshallow
           nimble --accept develop
+          git clone https://github.com/libgit2/libgit2.git
+          cd libgit2
+          mkdir build
+          cd build
+          cmake ..
+          cmake --build . -- --quiet
+          cd ../..
+          nimble -y develop
+          if [ "${{ matrix.os }}" == "macos-latest" ]; then
+            balls -d:libgit2Lib="$(pwd)/libgit2/build/libgit2.dylib" --passc:"-I$(pwd)/libgit2/include"
 
-          balls \
-            --passL:"@$(pwd)/conanbuildinfo.gcc" \
-            --passC:"@$(pwd)/conanbuildinfo.gcc" \
-            -d:libgit2LinkMode=dlink \
-            -d:libssh2LinkMode=dlink \
+          else
+            balls -d:libgit2Lib="$(pwd)/libgit2/build/libgit2.so" --passc:"-I$(pwd)/libgit2/include"
+
+          fi
 
       - name: Build docs
         if: ${{ matrix.docs }} == 'true'
