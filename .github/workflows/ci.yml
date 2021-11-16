@@ -41,10 +41,6 @@ jobs:
           path: nim
           version: ${{ matrix.nim }}
 
-      - name: Setup libgit
-        if: ${{ matrix.os }} == 'ubuntu-latest'
-        run:
-          sudo apt-get install -y libgit2-dev
 
       - name: Run tests
         shell: bash
@@ -52,7 +48,16 @@ jobs:
           cd ci
           git fetch --unshallow
           nimble --accept develop
-          nimble test
+          git clone https://github.com/libgit2/libgit2.git
+          cd libgit2
+          mkdir build
+          cd build
+          cmake ..
+          cmake --build . -- --quiet
+          realpath libgit2.so
+          cd ../..
+          nimble -y develop
+          balls -d:libgit2DynLib="$(pwd)/libgit2/build/libgit2.so" --passc:"-I$(pwd)/libgit2/include"
 
       - name: Build docs
         if: ${{ matrix.docs }} == 'true'
