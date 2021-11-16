@@ -54,7 +54,6 @@ jobs:
           cd build
           cmake ..
           cmake --build . -- --quiet
-          realpath libgit2.so
           cd ../..
           nimble -y develop
           balls -d:libgit2DynLib="$(pwd)/libgit2/build/libgit2.so" --passc:"-I$(pwd)/libgit2/include"
