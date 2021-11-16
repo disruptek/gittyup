@@ -48,7 +48,7 @@ jobs:
           cd ci
           git fetch --unshallow
           nimble --accept develop
-          git clone https://github.com/libgit2/libgit2.git
+          git clone --depth 1 --branch v1.3.0 https://github.com/libgit2/libgit2.git
           cd libgit2
           mkdir build
           cd build
