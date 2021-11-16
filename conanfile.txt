@@ -1,0 +1,5 @@
+[requires]
+libgit2/1.3.0
+
+[generators]
+gcc
