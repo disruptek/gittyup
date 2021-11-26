@@ -4,51 +4,20 @@
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/disruptek/gittyup?style=flat)](https://github.com/disruptek/gittyup/releases/latest)
 ![Minimum supported Nim version](https://img.shields.io/badge/nim-1.2.13%2B-informational?style=flat&logo=nim)
 [![License](https://img.shields.io/github/license/disruptek/gittyup?style=flat)](#license)
-[![buy me a coffee](https://img.shields.io/badge/donate-buy%20me%20a%20coffee-orange.svg)](https://www.buymeacoffee.com/disruptek)
 
 This is a _higher_-level and idiomatic abstraction for
 [libgit2](https://libgit2.org/) that builds upon the
-[nimgit2](https://github.com/genotrance/nimgit2) wrapper produced by
-[nimterop](https://github.com/nimterop/nimterop).
+[hlibgit2](https://github.com/haxscramper/hlibgit2) and
+[hlibssh2](https://github.com/haxscramper/hlibssh2) wrappers; the user supplies
+the underlying libgit2 and libssh2 libraries in the environment.
 
 ## Exceptional Support ... so to speak
 
 Supported on Linux, OS X, and Windows, with the following caveats:
 
-### nim-1.5.1 c --os:windows
-
-Unsupported due to apparent Nimterop issues.
-
-### cpp --cc:clang --define:git2Static
-
-Unsupported due to codegen bug.  Note that this generally includes MacOSX.
-
-### --define:git2Static
-
-We don't run it in CI because we don't have a static SSL library there at the
-moment, but it probably works if you have such an animal on your system.
-
 ## Usage
 
-You need a `libgit2` >= `1.0.0` and `1.1.1` is the latest supported release; I
-recommend this combination of build flags:
-
-```
-# build libraries from scratch using the libgit2 repo
---define:git2Git --define:git2SetVer="v1.1.1"
-```
-
-These don't work for me due to apparent Nimterop issues:
-```
-# use your system's libgit2
---define:git2Std --define:git2SetVer="1.1.1"
-```
-
-These may be useful to provide SSH support on Windows:
-```
-# use pre-built Julia Binaries
---define:git2JBB --define:git2SetVer="1.0.1"
-```
+We test with `libgit2-1.3.0` though earlier versions may work.
 
 This gives some idea for the usage:
 
@@ -66,9 +35,9 @@ block cloning:
     # this is your error handler;
     # code is an enum of GitResultCode
     case code:
-    of grcExists:
+    of GIT_EEXISTS:
       error dir, " already exists, i guess"
-    of grcNotFound:
+    of GIT_ENOTFOUND:
       error url, " isn't a git url, maybe"
     else:
       # an error string more specific than $code
