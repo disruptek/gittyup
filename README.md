@@ -11,10 +11,6 @@ This is a _higher_-level and idiomatic abstraction for
 [hlibssh2](https://github.com/haxscramper/hlibssh2) wrappers; the user supplies
 the underlying libgit2 and libssh2 libraries in the environment.
 
-## Exceptional Support ... so to speak
-
-Supported on Linux, OS X, and Windows, with the following caveats:
-
 ## Usage
 
 We test with `libgit2-1.3.0` though earlier versions may work.
