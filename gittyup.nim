@@ -12,38 +12,44 @@ import std/hashes
 import std/tables
 import std/uri
 
-const
-  git2SetVer {.strdefine, used.} = "v1.0.1"
+import hlibgit2/strarray
+import hlibgit2/types
+import hlibgit2/buffer
+import hlibgit2/pathspec
+import hlibgit2/diff
+import hlibgit2/branch
+import hlibgit2/clone
+import hlibgit2/status
+import hlibgit2/checkout
+import hlibgit2/oid
+import hlibgit2/tree
+import hlibgit2/errors
+import hlibgit2/common
+import hlibgit2/global
+import hlibgit2/commit
+import hlibgit2/tag
+import "hlibgit2/object"
+import hlibgit2/remote
+import hlibgit2/refs
+import hlibgit2/repository
+import hlibgit2/annotated_commit
+import hlibgit2/revparse
+import hlibgit2/revwalk
+import hlibgit2/signature
 
-when git2SetVer == "master":
-  discard
-elif git2SetVer == "v1.0.0":
-  discard
-elif git2SetVer == "v1.0.1":
-  discard
-elif git2SetVer == "v1.1.0":
-  discard
-elif git2SetVer == "v1.1.1":
-  discard
-elif git2SetVer == "1.0.1" and defined(git2JBB):
-  discard
-elif git2SetVer == "1.0.0" and defined(git2JBB):
-  discard
-elif git2SetVer == "1.1.0" and defined(git2JBB):
-  discard
-elif not defined(debugGit):
-  {.warning: "libgit2 version `" & git2SetVer & "` unsupported".}
-
-import nimgit2
 import badresults
 export badresults
+
+const
+  GIT_DIFF_OPTIONS_VERSION* = 1
+  GIT_STATUS_OPTIONS_VERSION* = 1
+  GIT_CLONE_OPTIONS_VERSION* = 1
+  GIT_CHECKOUT_OPTIONS_VERSION* = 1
 
 # git_strarray_dispose replaces git_strarray_free in >v1.0.1
 when not compiles(git_strarray_dispose):
   template git_strarray_dispose(arr: ptr git_strarray) =
     git_strarray_free(arr)
-
-{.hint: "libgit2 version `" & git2SetVer & "`".}
 
 type
   # separating out stuff we free via routines from libgit2
@@ -60,256 +66,16 @@ type
   GitTreeWalkCallback* = proc (root: cstring; entry: ptr git_tree_entry;
                                payload: pointer): cint
 
-  GitBranchType* = enum
-    gbtLocal  = (GIT_BRANCH_LOCAL, "local")
-    gbtRemote = (GIT_BRANCH_REMOTE, "remote")
-    gbtAll    = (GIT_BRANCH_ALL, "all")
-
-  GitTreeWalkMode* = enum
-    gtwPre  = (GIT_TREEWALK_PRE, "pre")
-    gtwPost = (GIT_TREEWALK_POST, "post")
-
-  GitRepoState* = enum
-    grsNone                  = (GIT_REPOSITORY_STATE_NONE,
-                                "none")
-    grsMerge                 = (GIT_REPOSITORY_STATE_MERGE,
-                                "merge")
-    grsRevert                = (GIT_REPOSITORY_STATE_REVERT,
-                                "revert")
-    grsRevertSequence        = (GIT_REPOSITORY_STATE_REVERT_SEQUENCE,
-                                "revert sequence")
-    grsCherrypick            = (GIT_REPOSITORY_STATE_CHERRYPICK,
-                                "cherrypick")
-    grsCherrypickSequence    = (GIT_REPOSITORY_STATE_CHERRYPICK_SEQUENCE,
-                                "cherrypick sequence")
-    grsBisect                = (GIT_REPOSITORY_STATE_BISECT,
-                                "bisect")
-    grsRebase                = (GIT_REPOSITORY_STATE_REBASE,
-                                "rebase")
-    grsRebaseInteractive     = (GIT_REPOSITORY_STATE_REBASE_INTERACTIVE,
-                                "rebase interactive")
-    grsRebaseMerge           = (GIT_REPOSITORY_STATE_REBASE_MERGE,
-                                "rebase merge")
-    grsApplyMailbox          = (GIT_REPOSITORY_STATE_APPLY_MAILBOX,
-                                "apply mailbox")
-    grsApplyMailboxOrRebase  = (GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE,
-                                "apply mailbox or rebase")
-
-  GitPathSpecFlag* = enum
-    gpsDefault              = (GIT_PATHSPEC_DEFAULT, "default")
-    gpsIgnoreCase           = (GIT_PATHSPEC_IGNORE_CASE, "ignore case")
-    gpsUseCase              = (GIT_PATHSPEC_USE_CASE, "use case")
-    gpsNoGlob               = (GIT_PATHSPEC_NO_GLOB, "no glob")
-    gpsNoMatchError         = (GIT_PATHSPEC_NO_MATCH_ERROR, "no match error")
-    gpsFindFailures         = (GIT_PATHSPEC_FIND_FAILURES, "find failures")
-    gpsFailuresOnly         = (GIT_PATHSPEC_FAILURES_ONLY, "failures only")
-
-  GitStatusShow* = enum
-    ssIndexAndWorkdir       = (GIT_STATUS_SHOW_INDEX_AND_WORKDIR,
-                               "index and workdir")
-    ssIndexOnly             = (GIT_STATUS_SHOW_INDEX_ONLY,
-                               "index only")
-    ssWorkdirOnly           = (GIT_STATUS_SHOW_WORKDIR_ONLY,
-                               "workdir only")
-
-  GitStatusOption* = enum
-    gsoIncludeUntracked      = (GIT_STATUS_OPT_INCLUDE_UNTRACKED,
-                                "include untracked")
-    gsoIncludeIgnored        = (GIT_STATUS_OPT_INCLUDE_IGNORED,
-                                "include ignored")
-    gsoIncludeUnmodified     = (GIT_STATUS_OPT_INCLUDE_UNMODIFIED,
-                                "include unmodified")
-    gsoExcludeSubmodules     = (GIT_STATUS_OPT_EXCLUDE_SUBMODULES,
-                                "exclude submodules")
-    gsoRecurseUntrackedDirs  = (GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS,
-                                "recurse untracked dirs")
-    gsoDisablePathspecMatch  = (GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH,
-                                "disable pathspec match")
-    gsoRecurseIgnoredDirs    = (GIT_STATUS_OPT_RECURSE_IGNORED_DIRS,
-                                "recurse ignored dirs")
-    gsoRenamesHeadToIndex    = (GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX,
-                                "renames head to index")
-    gsoRenamesIndexToWorkdir = (GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR,
-                                "renames index to workdir")
-    gsoSortCaseSensitively   = (GIT_STATUS_OPT_SORT_CASE_SENSITIVELY,
-                                "sort case sensitively")
-    gsoSortCaseInsensitively = (GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY,
-                                "sort case insensitively")
-    gsoRenamesFromRewrites   = (GIT_STATUS_OPT_RENAMES_FROM_REWRITES,
-                                "renames from rewrites")
-    gsoNoRefresh             = (GIT_STATUS_OPT_NO_REFRESH,
-                                "no refresh")
-    gsoUpdateIndex           = (GIT_STATUS_OPT_UPDATE_INDEX,
-                                "update index")
-    gsoIncludeUnreadable     = (GIT_STATUS_OPT_INCLUDE_UNREADABLE,
-                                "include unreadable")
-
-  GitStatusFlag* = enum
-    gsfCurrent           = (GIT_STATUS_CURRENT, "current")
-    # this space intentionally left blank
-    gsfIndexNew          = (GIT_STATUS_INDEX_NEW, "index new")
-    gsfIndexModified     = (GIT_STATUS_INDEX_MODIFIED, "index modified")
-    gsfIndexDeleted      = (GIT_STATUS_INDEX_DELETED, "index deleted")
-    gsfIndexRenamed      = (GIT_STATUS_INDEX_RENAMED, "index renamed")
-    gsfIndexTypechange   = (GIT_STATUS_INDEX_TYPECHANGE, "index typechange")
-    # this space intentionally left blank
-    gsfTreeNew           = (GIT_STATUS_WT_NEW, "tree new")
-    gsfTreeModified      = (GIT_STATUS_WT_MODIFIED, "tree modified")
-    gsfTreeDeleted       = (GIT_STATUS_WT_DELETED, "tree deleted")
-    gsfTreeTypechange    = (GIT_STATUS_WT_TYPECHANGE, "tree typechange")
-    gsfTreeRenamed       = (GIT_STATUS_WT_RENAMED, "tree renamed")
-    # this space intentionally left blank
-    gsfIgnored           = (GIT_STATUS_IGNORED, "ignored")
-    gsfConflicted        = (GIT_STATUS_CONFLICTED, "conflicted")
-
-  GitCheckoutStrategy* = enum
-    gcsNone                      = (GIT_CHECKOUT_NONE,
-                                    "dry run")
-    gcsSafe                      = (GIT_CHECKOUT_SAFE,
-                                    "safe")
-    gcsForce                     = (GIT_CHECKOUT_FORCE,
-                                    "force")
-    gcsRecreateMissing           = (GIT_CHECKOUT_RECREATE_MISSING,
-                                    "recreate missing")
-    gcsAllowConflicts            = (GIT_CHECKOUT_ALLOW_CONFLICTS,
-                                    "allow conflicts")
-    gcsRemoveUntracked           = (GIT_CHECKOUT_REMOVE_UNTRACKED,
-                                    "remove untracked")
-    gcsRemoveIgnored             = (GIT_CHECKOUT_REMOVE_IGNORED,
-                                    "remove ignored")
-    gcsUpdateOnly                = (GIT_CHECKOUT_UPDATE_ONLY,
-                                    "update only")
-    gcsDontUpdateIndex           = (GIT_CHECKOUT_DONT_UPDATE_INDEX,
-                                    "don't update index")
-    gcsNoRefresh                 = (GIT_CHECKOUT_NO_REFRESH,
-                                    "no refresh")
-    gcsSkipUnmerged              = (GIT_CHECKOUT_SKIP_UNMERGED,
-                                    "skip unmerged")
-    gcsUseOurs                   = (GIT_CHECKOUT_USE_OURS,
-                                    "use ours")
-    gcsUseTheirs                 = (GIT_CHECKOUT_USE_THEIRS,
-                                    "use theirs")
-    gcsDisablePathspecMatch      = (GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH,
-                                    "disable pathspec match")
-    # this space intentionally left blank
-    gcsUpdateSubmodules          = (GIT_CHECKOUT_UPDATE_SUBMODULES,
-                                    "update submodules")
-    gcsUpdateSubmodulesIfChanged = (GIT_CHECKOUT_UPDATE_SUBMODULES_IF_CHANGED,
-                                    "update submodules if changed")
-    gcsSkipLockedDirectories     = (GIT_CHECKOUT_SKIP_LOCKED_DIRECTORIES,
-                                    "skip locked directories")
-    gcsDontOverwriteIgnored      = (GIT_CHECKOUT_DONT_OVERWRITE_IGNORED,
-                                    "don't overwrite ignored")
-    gcsConflictStyleMerge        = (GIT_CHECKOUT_CONFLICT_STYLE_MERGE,
-                                    "conflict style merge")
-    gcsConflictStyleDiff3        = (GIT_CHECKOUT_CONFLICT_STYLE_DIFF3,
-                                    "conflict style diff3")
-    gcsDontRemoveExisting        = (GIT_CHECKOUT_DONT_REMOVE_EXISTING,
-                                    "don't remove existing")
-    gcsDontWriteIndex            = (GIT_CHECKOUT_DONT_WRITE_INDEX,
-                                    "don't write index")
-
-  GitCheckoutNotify* = enum
-    gcnNone            = (GIT_CHECKOUT_NOTIFY_NONE, "none")
-    gcnConflict        = (GIT_CHECKOUT_NOTIFY_CONFLICT, "conflict")
-    gcnDirty           = (GIT_CHECKOUT_NOTIFY_DIRTY, "dirty")
-    gcnUpdated         = (GIT_CHECKOUT_NOTIFY_UPDATED, "updated")
-    gcnUntracked       = (GIT_CHECKOUT_NOTIFY_UNTRACKED, "untracked")
-    gcnIgnored         = (GIT_CHECKOUT_NOTIFY_IGNORED, "ignored")
-    gcnAll             = (GIT_CHECKOUT_NOTIFY_ALL, "all")
-
-  GitResultCode* = enum
-    grcApplyFail       = (GIT_EAPPLYFAIL, "patch failed")
-    grcIndexDirty      = (GIT_EINDEXDIRTY, "dirty index")
-    grcMismatch        = (GIT_EMISMATCH, "hash mismatch")
-    grcRetry           = (GIT_RETRY, "retry")
-    grcIterOver        = (GIT_ITEROVER, "end of iteration")
-    grcPassThrough     = (GIT_PASSTHROUGH, "pass-through")
-    # this space intentionally left blank
-    grcMergeConflict   = (GIT_EMERGE_CONFLICT, "merge conflict")
-    grcDirectory       = (GIT_EDIRECTORY, "directory")
-    grcUncommitted     = (GIT_EUNCOMMITTED, "uncommitted")
-    grcInvalid         = (GIT_EINVALID, "invalid")
-    grcEndOfFile       = (GIT_EEOF, "end-of-file")
-    grcPeel            = (GIT_EPEEL, "peel")
-    grcApplied         = (GIT_EAPPLIED, "applied")
-    grcCertificate     = (GIT_ECERTIFICATE, "certificate")
-    grcAuthentication  = (GIT_EAUTH, "authentication")
-    grcModified        = (GIT_EMODIFIED, "modified")
-    grcLocked          = (GIT_ELOCKED, "locked")
-    grcConflict        = (GIT_ECONFLICT, "conflict")
-    grcInvalidSpec     = (GIT_EINVALIDSPEC, "invalid spec")
-    grcNonFastForward  = (GIT_ENONFASTFORWARD, "not fast-forward")
-    grcUnmerged        = (GIT_EUNMERGED, "unmerged")
-    grcUnbornBranch    = (GIT_EUNBORNBRANCH, "unborn branch")
-    grcBareRepo        = (GIT_EBAREREPO, "bare repository")
-    grcUser            = (GIT_EUSER, "user-specified")
-    grcBuffer          = (GIT_EBUFS, "buffer overflow")
-    grcAmbiguous       = (GIT_EAMBIGUOUS, "ambiguous match")
-    grcExists          = (GIT_EEXISTS, "object exists")
-    grcNotFound        = (GIT_ENOTFOUND, "not found")
-    # this space intentionally left blank
-    grcError           = (GIT_ERROR, "generic error")
-    grcOk              = (GIT_OK, "ok")
-
-  GitErrorClass* = enum
-    gecNone        = (GIT_ERROR_NONE, "none")
-    gecNoMemory    = (GIT_ERROR_NOMEMORY, "no memory")
-    gecOS          = (GIT_ERROR_OS, "os")
-    gecInvalid     = (GIT_ERROR_INVALID, "invalid")
-    gecReference   = (GIT_ERROR_REFERENCE, "reference")
-    gecZlib        = (GIT_ERROR_ZLIB, "zlib")
-    gecRepository  = (GIT_ERROR_REPOSITORY, "repository")
-    gecConfig      = (GIT_ERROR_CONFIG, "config")
-    gecRegEx       = (GIT_ERROR_REGEX, "regex")
-    gecODB         = (GIT_ERROR_ODB, "odb")
-    gecIndex       = (GIT_ERROR_INDEX, "index")
-    gecObject      = (GIT_ERROR_OBJECT, "object")
-    gecNet         = (GIT_ERROR_NET, "network")
-    gecTag         = (GIT_ERROR_TAG, "tag")
-    gecTree        = (GIT_ERROR_TREE, "tree")
-    gecIndexer     = (GIT_ERROR_INDEXER, "indexer")
-    gecSSL         = (GIT_ERROR_SSL, "ssl")
-    gecSubModule   = (GIT_ERROR_SUBMODULE, "submodule")
-    gecThread      = (GIT_ERROR_THREAD, "thread")
-    gecStash       = (GIT_ERROR_STASH, "stash")
-    gecCheckOut    = (GIT_ERROR_CHECKOUT, "check out")
-    gecFetchHead   = (GIT_ERROR_FETCHHEAD, "fetch head")
-    gecMerge       = (GIT_ERROR_MERGE, "merge")
-    gecSSH         = (GIT_ERROR_SSH, "ssh")
-    gecFilter      = (GIT_ERROR_FILTER, "filter")
-    gecRevert      = (GIT_ERROR_REVERT, "revert")
-    gecCallBack    = (GIT_ERROR_CALLBACK, "call back")
-    gecCherryPick  = (GIT_ERROR_CHERRYPICK, "cherry pick")
-    gecDescribe    = (GIT_ERROR_DESCRIBE, "describe")
-    gecReBase      = (GIT_ERROR_REBASE, "re-base")
-    gecFileSystem  = (GIT_ERROR_FILESYSTEM, "filesystem")
-    gecPatch       = (GIT_ERROR_PATCH, "patch")
-    gecWorkTree    = (GIT_ERROR_WORKTREE, "work tree")
-    gecSHA1        = (GIT_ERROR_SHA1, "sha1")
-
-  GitObjectKind* = enum
-    # we have to add 2 here to satisfy nim; discriminants.low must be zero
-    goAny         = (2 + GIT_OBJECT_ANY, "object")        # -2
-    goInvalid     = (2 + GIT_OBJECT_INVALID, "invalid")   # -1
-    # this space intentionally left blank
-    goCommit      = (2 + GIT_OBJECT_COMMIT, "commit")     #  1
-    goTree        = (2 + GIT_OBJECT_TREE, "tree")         #  2
-    goBlob        = (2 + GIT_OBJECT_BLOB, "blob")         #  3
-    goTag         = (2 + GIT_OBJECT_TAG, "tag")           #  4
-    # this space intentionally left blank
-    goOfsDelta    = (2 + GIT_OBJECT_OFS_DELTA, "ofs")     #  6
-    goRefDelta    = (2 + GIT_OBJECT_REF_DELTA, "ref")     #  7
-
+  GitObjectKind* = git_object_t
   GitThing* = ref object
     o*: GitObject
     # we really don't have anything else to say about these just yet
-    case kind*: GitObjectKind:
-    of goTag:
+    case kind*: GitObjectKind
+    of GIT_OBJECT_TAG:
       discard
-    of goRefDelta:
+    of GIT_OBJECT_REF_DELTA:
       discard
-    of goTree:
+    of GIT_OBJECT_TREE:
       discard
     else:
       discard
@@ -334,18 +100,43 @@ type
   GitStatusList* = ptr git_status_list
   GitTree* = ptr git_tree
   GitSignature* = ptr git_signature
-
   GitTagTable* = OrderedTableRef[string, GitThing]
   GitResult*[T] = Result[T, GitResultCode]
 
-# these just cast some cints into appropriate enums
-template grc(code: cint): GitResultCode = cast[GitResultCode](code.ord)
-template grc(code: GitResultCode): GitResultCode = code
-template gec(code: cint): GitErrorClass = cast[GitErrorClass](code.ord)
+  GitResultCode* = git_error_code
+  GitRepoState* = git_repository_state_t
+  GitCheckoutNotify* = git_checkout_notify_t
+  GitTreeWalkMode* = git_treewalk_mode
+  GitStatusShow* = git_status_show_t
+  GitStatusFlag* = git_status_t
+  GitCheckoutStrategy* = git_checkout_strategy_t
+  GitErrorClass* = git_error_t
+  GitStatusOption* = git_status_opt_t
+  GitBranchType* = git_branch_t
+  GitPathSpecFlag* = git_pathspec_flag_t
 
-# can't remember why we need this, but i'm curious.  let me know.
+export git_error_code
+export git_repository_state_t
+export git_checkout_notify_t
+export git_treewalk_mode
+export git_status_show_t
+export git_status_t
+export git_checkout_strategy_t
+export git_error_t
+export git_status_opt_t
+export git_branch_t
+export git_pathspec_flag_t
+
+# these just cast some cints into appropriate enums
+template grc(code: cint): GitResultCode =
+  to_git_error_code(cast[c_git_error_code](code))
+
+template grc(code: GitResultCode): GitResultCode = code
+template gec(code: cint): GitErrorClass =
+  to_git_error_t(cast[c_git_error_t](code))
+
 proc hash*(gcs: GitCheckoutStrategy): Hash =
-  ## convenience
+  ## too large an enum for native sets
   gcs.ord.hash
 
 macro enumValues(e: typed): untyped =
@@ -355,30 +146,30 @@ const
   validGitStatusFlags = enumValues(GitStatusFlag)
   validGitObjectKinds = enumValues(GitObjectKind)
   defaultCheckoutStrategy = [
-    gcsSafe,
-    gcsRecreateMissing,
-    gcsSkipLockedDirectories,
-    gcsDontOverwriteIgnored,
+    GIT_CHECKOUT_SAFE,
+    GIT_CHECKOUT_RECREATE_MISSING,
+    GIT_CHECKOUT_SKIP_LOCKED_DIRECTORIES,
+    GIT_CHECKOUT_DONT_OVERWRITE_IGNORED,
   ].toHashSet
 
-  commonDefaultStatusFlags: set[GitStatusOption] = {
-    gsoIncludeUntracked,
-    gsoIncludeIgnored,
-    gsoIncludeUnmodified,
-    gsoExcludeSubmodules,
-    gsoDisablePathspecMatch,
-    gsoRenamesHeadToIndex,
-    gsoRenamesIndexToWorkdir,
-    gsoRenamesFromRewrites,
-    gsoUpdateIndex,
-    gsoIncludeUnreadable,
+  commonDefaultStatusFlags = {
+    GIT_STATUS_OPT_INCLUDE_UNTRACKED,
+    GIT_STATUS_OPT_INCLUDE_IGNORED,
+    GIT_STATUS_OPT_INCLUDE_UNMODIFIED,
+    GIT_STATUS_OPT_EXCLUDE_SUBMODULES,
+    GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH,
+    GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX,
+    GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR,
+    GIT_STATUS_OPT_RENAMES_FROM_REWRITES,
+    GIT_STATUS_OPT_UPDATE_INDEX,
+    GIT_STATUS_OPT_INCLUDE_UNREADABLE,
   }
 
   defaultStatusFlags =
     when FileSystemCaseSensitive:
-      commonDefaultStatusFlags + {gsoSortCaseSensitively}
+      commonDefaultStatusFlags + {GIT_STATUS_OPT_SORT_CASE_SENSITIVELY}
     else:
-      commonDefaultStatusFlags + {gsoSortCaseInsensitively}
+      commonDefaultStatusFlags + {GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY}
 
 proc dumpError*(code: GitResultCode): string =
   ## retrieves the last git error message
@@ -389,26 +180,26 @@ proc dumpError*(code: GitResultCode): string =
       raise newException(Defect, result)
 
 template dumpError() =
-  let emsg = grcOk.dumpError
+  let emsg = GIT_OK.dumpError
   if emsg != "":
     error emsg
 
 template gitFail*(code: GitResultCode; body: untyped) =
   ## a version of gitTrap that expects failure; no error messages!
-  if code != grcOk:
+  if code != GIT_OK:
     body
 
 template gitFail*(allocd: typed; code: GitResultCode; body: untyped) =
   ## a version of gitTrap that expects failure; no error messages!
   defer:
-    if code == grcOk:
+    if code == GIT_OK:
       free(allocd)
   gitFail(code, body)
 
 template gitTrap*(code: GitResultCode; body: untyped) =
   ## trap an api result code, dump it via logging,
   ## run the body as an error handler
-  if code != grcOk:
+  if code != GIT_OK:
     dumpError()
     body
 
@@ -416,7 +207,7 @@ template gitTrap*(allocd: typed; code: GitResultCode; body: untyped) =
   ## trap an api result code, dump it via logging,
   ## run the body as an error handler
   defer:
-    if code == grcOk:
+    if code == GIT_OK:
       free(allocd)
   gitTrap(code, body)
 
@@ -479,13 +270,16 @@ proc loadCerts(): bool =
   if file != "" and dir == "":
     dir = parentDir file
   result = git_libgit2_opts(
-             GIT_OPT_SET_SSL_CERT_LOCATIONS.cint, file, dir) >= 0
+             GIT_OPT_SET_SSL_CERT_LOCATIONS.cint,
+             file.cstring, dir.cstring) >= 0
   # this is a little heavy-handed, but it might save someone some time
   if not result:
     dumpError()
 
-template initGit() =
-  result = git_libgit2_init() > 0
+
+proc initGit(): bool =
+  let code = git_libgit2_init()
+  result = code > 0
   when defined(debugGit):
     debug "git init"
   when not defined(windows):
@@ -495,12 +289,12 @@ proc init*(): bool =
   ## initialize the library to prepare for git operations;
   ## returns true if libgit2 was initialized
   when defined(gitShutsDown):
-    initGit()
+    return initGit()
   else:
     block:
       once:
-        initGit()
-        break
+        return initGit()
+
       result = true
 
 proc shutdown*(): bool =
@@ -535,7 +329,7 @@ template setResultAsError(result: typed; code: cint | GitResultCode) =
 template withResultOf(gitsaid: cint | GitResultCode; body: untyped) =
   ## when git said there was an error, set the result code;
   ## else, run the body
-  if grc(gitsaid) == grcOk:
+  if grc(gitsaid) == GIT_OK:
     when defined(debugGit):
       debug "git said " & $grc(gitsaid)
     body
@@ -595,8 +389,8 @@ proc free*[T: GitHeapGits](point: ptr T) =
 proc free*[T: NimHeapGits](point: ptr T) =
   ## perform a free of a nim-alloced pointer to git data
   if point == nil:
-    when not defined(release) and not defined(danger):
-      raise newException(Defect, "attempt to free nil nim heap git object")
+    when not defined(release) or not defined(danger):
+      raise Defect.newException "attempt to free nil nim heap git object"
   else:
     when defined(debugGit):
       debug "\t~> freeing nim " & $typeof(point)
@@ -608,13 +402,14 @@ proc free*(thing: sink GitThing) =
   ## free a git thing and its gitobject contents appropriately
   assert thing != nil
   case thing.kind:
-  of goCommit:
+  of GIT_OBJECT_COMMIT:
     free(cast[GitCommit](thing.o))
-  of goTree:
+  of GIT_OBJECT_TREE:
     free(cast[GitTree](thing.o))
-  of goTag:
+  of GIT_OBJECT_TAG:
     free(cast[GitTag](thing.o))
-  of {goAny, goInvalid, goBlob, goOfsDelta, goRefDelta}:
+  of GIT_OBJECT_ANY, GIT_OBJECT_INVALID, GIT_OBJECT_BLOB,
+     GIT_OBJECT_OFS_DELTA, GIT_OBJECT_REF_DELTA:
     free(cast[GitObject](thing.o))
   #disarm thing
 
@@ -627,24 +422,13 @@ proc free*(s: string) =
   ## for template compatability only
   discard
 
-func kind(obj: GitObject): GitObjectKind =
-  ## fetch the GitObjectKind of a git object
-  assert obj != nil
-  assert GitObjectKind.low == goAny
-  result = GitObjectKind(git_object_type(obj) - GIT_OBJECT_ANY)
-  if validGitObjectKinds * {result} == {}:
-    result = goInvalid
+proc kind(obj: GitObject | GitCommit | GitTag): GitObjectKind =
+  git_object_type(cast[GitObject](obj))
 
 proc newThing(obj: GitObject | GitCommit | GitTag): GitThing =
   ## turn a git object into a thing
   assert obj != nil
-  when true:
-    result = GitThing(kind: cast[GitObject](obj).kind, o: cast[GitObject](obj))
-  else:
-    try:
-      result = GitThing(kind: cast[GitObject](obj).kind, o: cast[GitObject](obj))
-    except:
-      result = GitThing(kind: goAny, o: cast[GitObject](obj))
+  GitThing(kind: obj.kind, o: cast[GitObject](obj))
 
 proc newThing(thing: GitThing): GitThing =
   ## turning a thing into a thing involves no change
@@ -792,7 +576,7 @@ func `$`*(obj: GitObject): string =
   let
     kind = obj.kind
   case kind:
-  of goInvalid:
+  of GIT_OBJECT_INVALID:
     result = "{invalid}"
   else:
     result = $kind & "-" & $obj.git_object_id
@@ -825,14 +609,14 @@ proc copy*(thing: GitThing): GitResult[GitThing] =
   ## create a copy of the thing; free it with free
   assert thing != nil and thing.o != nil
   case thing.kind:
-  of goInvalid:
-    result.err grcInvalid
-  of goCommit:
+  of GIT_OBJECT_INVALID:
+    result.err GIT_EINVALID
+  of GIT_OBJECT_COMMIT:
     var
       dupe: GitCommit
     withResultOf git_commit_dup(addr dupe, cast[GitCommit](thing.o)):
       result.ok newThing(dupe)
-  of goTag:
+  of GIT_OBJECT_TAG:
     var
       dupe: GitTag
     withResultOf git_tag_dup(addr dupe, cast[GitTag](thing.o)):
@@ -911,12 +695,14 @@ proc message*(thing: GitThing): string =
   ## retrieve the message associated with a git thing
   assert thing != nil and thing.o != nil
   case thing.kind:
-  of goTag:
+  of GIT_OBJECT_TAG:
     result = cast[GitTag](thing.o).message
-  of goCommit:
+  of GIT_OBJECT_COMMIT:
     result = cast[GitCommit](thing.o).message
   else:
-    raise newException(ValueError, "dunno how to get a message: " & $thing)
+    raise ValueError.newException:
+      "Cannot get message for git object " &
+        $thing & " (kind was '" & $thing.kind & "')"
 
 proc summary*(commit: GitCommit): string =
   ## produce a summary for a given commit
@@ -928,12 +714,15 @@ proc summary*(thing: GitThing): string =
   ## produce a summary for a git thing
   assert thing != nil and thing.o != nil
   case thing.kind:
-  of goTag:
+  of GIT_OBJECT_TAG:
     result = cast[GitTag](thing.o).message
-  of goCommit:
+  of GIT_OBJECT_COMMIT:
     result = cast[GitCommit](thing.o).summary
   else:
-    raise newException(ValueError, "dunno how to get a summary: " & $thing)
+    raise ValueError.newException:
+      "Cannot get summary for git object " &
+        $thing & " (kind was '" & $thing.kind & "')"
+
   result = result.strip
 
 proc free*(table: sink GitTagTable) =
@@ -991,19 +780,19 @@ proc hash*(thing: GitThing): Hash =
 
 proc commit*(thing: GitThing): GitCommit =
   ## turn a thing into its commit
-  assert thing != nil and thing.kind == goCommit
+  assert thing != nil and thing.kind == GIT_OBJECT_COMMIT
   result = cast[GitCommit](thing.o)
   assert result != nil
 
 proc committer*(thing: GitThing): GitSignature =
   ## get the committer of a thing that's a commit
-  assert thing != nil and thing.kind == goCommit
+  assert thing != nil and thing.kind == GIT_OBJECT_COMMIT
   result = git_commit_committer(cast[GitCommit](thing.o))
   assert result != nil
 
 proc author*(thing: GitThing): GitSignature =
   ## get the author of a thing that's a commit
-  assert thing != nil and thing.kind == goCommit
+  assert thing != nil and thing.kind == GIT_OBJECT_COMMIT
   result = git_commit_author(cast[GitCommit](thing.o))
   assert result != nil
 
@@ -1018,7 +807,7 @@ proc clone*(uri: Uri; path: string; branch = ""): GitResult[GitRepository] =
           options.checkout_branch = branch
         var
           repo: GitRepository
-        withResultOf git_clone(addr repo, $uri, path, options):
+        withResultOf git_clone(addr repo, cstring($uri), path, options):
           assert repo != nil
           result.ok repo
     finally:
@@ -1044,8 +833,7 @@ proc setHeadDetached*(repo: GitRepository; reference: string): GitResultCode =
 proc repositoryOpen*(path: string): GitResult[GitRepository] =
   ## open a repository by path; the repository must be freed
   withGit:
-    var
-      repo: GitRepository
+    var repo: GitRepository
     withResultOf git_repository_open(addr repo, path):
       assert repo != nil
       result.ok repo
@@ -1104,7 +892,7 @@ proc remoteCreate*(repo: GitRepository; name: string;
   withGit:
     var
       remote: GitRemote
-    withResultOf git_remote_create(addr remote, repo, name, $url):
+    withResultOf git_remote_create(addr remote, repo, name.cstring, cstring($url)):
       assert remote != nil
       result.ok remote
 
@@ -1153,9 +941,9 @@ proc tagList*(repo: GitRepository): GitResult[seq[string]] =
 proc lookupThing*(repo: GitRepository; name: string): GitResult[GitThing] =
   ## try to look some thing up in the repository with the given name
   withGit:
-    var
-      obj: GitObject
+    var obj: GitObject
     withResultOf git_revparse_single(addr obj, repo, name):
+      assert obj.kind != GIT_OBJECT_INVALID
       result.ok newThing(obj)
 
 proc newTagTable*(size = 32): GitTagTable =
@@ -1166,10 +954,10 @@ proc addTag(tags: var GitTagTable; name: string;
             thing: var GitThing): GitResultCode =
   ## add a thing to the tag table, perhaps peeling it first
   # if it's not a tag, just add it to the table and move on
-  if thing.kind != goTag:
+  if thing.kind != GIT_OBJECT_TAG:
     # no need to peel this thing
     tags[name] = thing
-    result = grcOk
+    result = GIT_OK
   else:
     # it's a tag, so attempt to dereference it
     let
@@ -1180,15 +968,14 @@ proc addTag(tags: var GitTagTable; name: string;
     else:
       # add the thing's target to the table under the current name
       tags[name] = target.get
-      result = grcOk
+      result = GIT_OK
     # free the thing; we don't need it anymore
     free thing
 
 proc tagTable*(repo: GitRepository): GitResult[GitTagTable] =
   ## compose a table of tags and their associated references
   block:
-    let
-      names = repo.tagList
+    let names = repo.tagList
     # if we cannot fetch a tag list,
     if names.isErr:
       result.err names.error
@@ -1209,7 +996,7 @@ proc tagTable*(repo: GitRepository): GitResult[GitTagTable] =
       else:
         # peel and add the thing to the tag table
         let code = tags.addTag(name, thing.get)
-        if code != grcOk:
+        if code != GIT_OK:
           debug &"failed peel for `{name}`: {code}"
 
     # don't forget to actually populate the result, i mean, who would be
@@ -1253,14 +1040,14 @@ iterator status*(repository: GitRepository; show: GitStatusShow;
       block:
         var
           code = git_status_options_init(options,
-                                         GIT_STATUS_OPTIONS_VERSION).grc
-        if code != grcOk:
+                                        GIT_STATUS_OPTIONS_VERSION).grc
+        if code != GIT_OK:
           # throw the error code
           yield Result[GitStatus, GitResultCode].err(code)
           break
 
         # add the options specified by the user
-        options.show = cast[git_status_show_t](show)
+        options.show = show.to_c_git_status_show_t
         for flag in flags.items:
           options.flags = bitand(options.flags.uint, flag.ord.uint).cuint
 
@@ -1268,7 +1055,7 @@ iterator status*(repository: GitRepository; show: GitStatusShow;
         var
           statum: GitStatusList
         code = git_status_list_new(addr statum, repository, options).grc
-        if code != grcOk:
+        if code != GIT_OK:
           # throw the error code
           yield Result[GitStatus, GitResultCode].err(code)
           break
@@ -1297,7 +1084,7 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
     block:
       # start with converting the thing to an annotated commit
       result = git_annotated_commit_lookup(addr target, repo, thing.oid).grc
-      if result != grcOk:
+      if result != GIT_OK:
         break
       defer:
         target.free
@@ -1305,15 +1092,15 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
       # use the oid of this target to look up the commit
       let oid = git_annotated_commit_id(target)
       result = git_commit_lookup(addr commit, repo, oid).grc
-      if result != grcOk:
+      if result != GIT_OK:
         break
       defer:
         commit.free
 
       # setup our checkout options
       result = git_checkout_options_init(options,
-                                         GIT_CHECKOUT_OPTIONS_VERSION).grc
-      if result != grcOk:
+                                        GIT_CHECKOUT_OPTIONS_VERSION).grc
+      if result != GIT_OK:
         break
 
       # reset the strategy per flags
@@ -1321,7 +1108,7 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
 
       # checkout the tree using the commit we fetched
       result = git_checkout_tree(repo, cast[GitObject](commit), options).grc
-      if result != grcOk:
+      if result != GIT_OK:
         break
 
       # get the commit ref name
@@ -1349,8 +1136,8 @@ proc checkoutHead*(repo: GitRepository;
       options = cast[ptr git_checkout_options](sizeof(git_checkout_options).alloc)
     try:
       # setup our checkout options
-      withResultOf git_checkout_options_init(options,
-                                             GIT_CHECKOUT_OPTIONS_VERSION):
+      withResultOf git_checkout_options_init(
+        options, GIT_CHECKOUT_OPTIONS_VERSION):
         # reset the strategy per flags
         options.checkout_strategy = setFlags(strategy)
 
@@ -1407,14 +1194,13 @@ proc treeEntryToThing*(repo: GitRepository;
       assert obj != nil
       result.ok newThing(obj)
 
-proc treeWalk*(tree: GitTree; mode: GitTreeWalkMode; callback: git_treewalk_cb;
-               payload: pointer): GitResultCode =
+proc treeWalk*(tree: GitTree; mode: git_treewalk_mode; callback: git_treewalk_cb;
+               payload: pointer): git_error_code =
   ## walk a tree and run a callback on every entry
   withGit:
-    result = git_tree_walk(tree, cast[git_treewalk_mode](mode.ord.cint),
-                           callback, payload).grc
+    result = git_tree_walk(tree, to_c_git_treewalk_mode(mode), callback, payload).grc
 
-proc treeWalk*(tree: GitTree; mode: GitTreeWalkMode): GitResult[GitTreeEntries] =
+proc treeWalk*(tree: GitTree; mode: git_treewalk_mode): GitResult[GitTreeEntries] =
   ## try to walk a tree and return a sequence of its entries
   withGit:
     var
@@ -1433,7 +1219,8 @@ proc treeWalk*(tree: GitTree; mode: GitTreeWalkMode): GitResult[GitTreeEntries] 
                                payload = addr entries):
       result.ok entries
 
-proc treeWalk*(tree: GitThing; mode = gtwPre): GitResult[GitTreeEntries] =
+proc treeWalk*(tree: GitThing;
+               mode = GIT_TREEWALK_PRE): GitResult[GitTreeEntries] =
   ## the laziest way to walk a tree, ever
   result = treeWalk(cast[GitTree](tree.o), mode)
 
@@ -1489,7 +1276,7 @@ iterator revWalk*(repo: GitRepository;
       # if oid won't be populated, we'll break here
       # so we don't end up trying to free it below
       if future.isErr:
-        if future.error != grcNotFound:
+        if future.error != GIT_ENOTFOUND:
           yield err[GitThing](future.error)
         break
 
@@ -1500,7 +1287,7 @@ iterator revWalk*(repo: GitRepository;
 
           # lookup the next commit using the current oid
           commit := repo.lookupCommit(oid):
-            if code != grcNotFound:
+            if code != GIT_ENOTFOUND:
               # undefined error; emit it as such
               yield err[GitThing](code)
             # and then break iteration
@@ -1521,7 +1308,7 @@ iterator revWalk*(repo: GitRepository;
           future = walker.next
           if future.isErr:
             # if we didn't reach the end of iteration,
-            if future.error notin {grcIterOver, grcNotFound}:
+            if future.error notin {GIT_ITEROVER, GIT_ENOTFOUND}:
               # emit the error
               yield err[GitThing](future.error)
 
@@ -1544,8 +1331,8 @@ proc newPathSpec*(spec: openArray[string]): GitResult[GitPathSpec] =
 
 proc matchWithParent(commit: GitCommit; nth: cuint;
                      options: ptr git_diff_options): GitResultCode =
-  ## grcOkay if the commit's tree intersects with the nth parent's tree;
-  ## else grcNotFound if there was no intersection
+  ## GIT_OK if the commit's tree intersects with the nth parent's tree;
+  ## else GIT_ENOTFOUND if there was no intersection
   ##
   ## (this is adapted from a helper in libgit2's log.c example)
   ## https://github.com/libgit2/libgit2/blob/master/examples/log.c
@@ -1581,7 +1368,7 @@ proc matchWithParent(commit: GitCommit; nth: cuint;
       break
 
     if git_diff_num_deltas(diff).uint == 0'u:
-      result = grcNotFound
+      result = GIT_ENOTFOUND
 
 proc allParentsMatch(commit: GitCommit; options: ptr git_diff_options;
                      parents: cuint): GitResult[bool] =
@@ -1593,10 +1380,10 @@ proc allParentsMatch(commit: GitCommit; options: ptr git_diff_options;
       let
         code = matchWithParent(commit, nth.cuint, options)
       case code:
-      of grcOk:
+      of GIT_OK:
         # this feels like a match; keep going
         continue
-      of grcNotFound:
+      of GIT_ENOTFOUND:
         # this is fine, but it's not a match
         result.ok false
       else:
@@ -1616,14 +1403,14 @@ proc zeroParentsMatch(commit: GitCommit; ps: GitPathSpec): GitResult[bool] =
       # these don't seem worth storing...
       #var matches: ptr git_pathspec_match_list
       let
-        gps: uint32 = {gpsNoMatchError}.setFlags
+        gps: uint32 = {GIT_PATHSPEC_NO_MATCH_ERROR}.setFlags
         # match the pathspec against the tree
         code = git_pathspec_match_tree(nil, tree, gps, ps).grc
       case code:
-      of grcOk:
+      of GIT_OK:
         # this feels like a match
         result.ok true
-      of grcNotFound:
+      of GIT_ENOTFOUND:
         # this is fine, but it's not a match
         result.ok false
       else:
@@ -1657,7 +1444,7 @@ iterator commitsForSpec*(repo: GitRepository;
     block steve:
       let
         code = git_diff_options_init(options, GIT_DIFF_OPTIONS_VERSION).grc
-      if code != grcOk:
+      if code != GIT_OK:
         yield err[GitThing](code)
         break steve
 
@@ -1764,25 +1551,30 @@ proc branchRemoteName*(repo: GitRepository;
         git_buf_dispose(addr buff)
 
 iterator branches*(repo: GitRepository;
-                   flags = {gbtLocal, gbtRemote}): GitResult[GitReference] =
+                   flags = {GIT_BRANCH_LOCAL,
+                            GIT_BRANCH_REMOTE}): GitResult[GitReference] =
   ## this time, you're just gonna have to guess at what this proc might do...
   ## (also, you're just gonna have to free your references...)
   assert repo != nil
-  if gbtAll in flags or flags.len == 0:
-    raise newException(Defect, "now see here, chuckles")
+  let flags =
+    if GIT_BRANCH_ALL in flags:
+      {GIT_BRANCH_LOCAL, GIT_BRANCH_REMOTE}
+    else:
+      flags
+  if flags.len == 0:
+    raise ValueError.newException:
+      "specify set of local, remote, or all branches"
 
   withGit:
-    var
-      gbt = block:
+    let
+      list = to_c_git_branch_t():
         # i know this is cookin' your noodle, but
-        if gbtLocal notin flags:
-          gbtRemote
-        elif gbtRemote notin flags:
-          gbtLocal
+        if GIT_BRANCH_LOCAL notin flags:
+          GIT_BRANCH_REMOTE
+        elif GIT_BRANCH_REMOTE notin flags:
+          GIT_BRANCH_LOCAL
         else:
-          gbtAll
-      # 'cause we're gonna need to take the addr of this value
-      list = cast[git_branch_t](gbt.ord)
+          GIT_BRANCH_ALL
 
     # follow close 'cause it's about to get weird
     block iteration:
@@ -1790,8 +1582,9 @@ iterator branches*(repo: GitRepository;
         iter: ptr git_branch_iterator
         # create an iterator
         code = git_branch_iterator_new(addr iter, repo, list).grc
+
       # if we couldn't create the iterator,
-      if code != grcOk:
+      if code != GIT_OK:
         # then emit the error and bail
         #yield err[GitReference](code)
         yield Result[GitReference, GitResultCode].err code
@@ -1804,14 +1597,15 @@ iterator branches*(repo: GitRepository;
         var
           branch: GitReference = nil
         # depending on whether we were able to advance,
-        code = git_branch_next(addr branch, addr list, iter).grc
+        code = git_branch_next(addr branch, unsafeAddr list, iter).grc
+
         case code:
-        of grcOk:
+        of GIT_OK:
           assert branch != nil
           # issue a branch result
           #yield ok(branch)
           yield Result[GitReference, GitResultCode].ok branch
-        of grcIterOver:
+        of GIT_ITEROVER:
           assert branch == nil
           # or end iteration normally
           break iteration
@@ -1918,14 +1712,15 @@ proc repositoryDiscover*(path: string; ceilings: seq[string] = @[];
   ## allows cross-filesystem traversal, while `ceilings` holds stop-dirs.
   withGit:
     const
-      sep = $(GIT_PATH_LIST_SEPARATOR)
+      sep = $('/') #GIT_PATH_LIST_SEPARATOR)
     var
       buff: git_buf
     # "4096 bytes oughta be enough for anybody"
     withResultOf git_buf_grow(addr buff, 4096.cuint):
       try:
-        withResultOf git_repository_discover(addr buff, path, xfs.cint,
-                                             ceilings.join(sep)):
+        withResultOf git_repository_discover(
+          addr buff, path.cstring, xfs.cint, ceilings.join(sep).cstring):
+
           result.ok $buff
       finally:
         git_buf_dispose(addr buff)

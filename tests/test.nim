@@ -26,7 +26,7 @@ let tmpdir = getTempDir() / "gittyup-" & $getCurrentProcessId() / ""
 template setup(): GitRepository =
   ## setup a repo for a test
   if not init():
-    fail dumpError(grcOk)
+    fail dumpError(GIT_OK)
   cleanup tmpdir
   let open = repositoryOpen getCurrentDir()
   check open.isOk
@@ -48,21 +48,22 @@ template test(body: untyped) =
 
 template gitTrap*(code: GitResultCode) =
   ## trap an api result code, use it to fail spectacularly
-  if code != grcOk:
+  if code != GIT_OK:
     fail dumpError(code)
 
 suite "giddy up, pardner":
   ## open the local repo
   test:
     if fileExists(getEnv"HOME" / ".gitconfig"):
-      if dumpError(grcOk) != "":
-        fail dumpError(grcOk)
+      if dumpError(GIT_OK) != "":
+        fail dumpError(GIT_OK)
+
     else:
       skip "all platforms error on missing .gitconfig"
 
   ## repo state
   test:
-    check repo.repositoryState == grsNone
+    check repo.repositoryState == GIT_REPOSITORY_STATE_NONE
 
   ## get the head
   test:
@@ -87,7 +88,7 @@ suite "giddy up, pardner":
   test:
     cloned := clone(cloneme, tmpdir):
       fail dumpError(code)
-    check grsNone == repositoryState cloned
+    check GIT_REPOSITORY_STATE_NONE == repositoryState cloned
 
   ## create and delete a tag
   test:
@@ -95,15 +96,15 @@ suite "giddy up, pardner":
       fail dumpError(code)
     oid := thing.tagCreate "test":
       fail dumpError(code)
-    check repo.tagDelete("test") == grcOk
-    check repo.tagDelete("test") == grcNotFound
+    check repo.tagDelete("test") == GIT_OK
+    check repo.tagDelete("test") == GIT_ENOTFOUND
 
   ## tag table
   test:
     tags := repo.tagTable:
       fail dumpError(code)
     if "test" in tags:
-      check repo.tagDelete("test") == grcOk
+      check repo.tagDelete("test") == GIT_OK
     else:
       when false:
         for s, tag in tags.pairs:
@@ -117,7 +118,7 @@ suite "giddy up, pardner":
     # clone ourselves into tmpdir
     cloned := cloneme.clone(tmpdir):
       fail dumpError(code)
-    check grsNone == cloned.repositoryState
+    check GIT_REPOSITORY_STATE_NONE == cloned.repositoryState
 
     # we'll need a walker, and we'll want it freed
     walker := cloned.newRevWalk:
@@ -140,7 +141,7 @@ suite "giddy up, pardner":
   test:
     cloned := cloneme.clone(tmpdir):
       fail dumpError(code)
-    check grsNone == cloned.repositoryState
+    check GIT_REPOSITORY_STATE_NONE == cloned.repositoryState
     let
       dotnimble = "gittyup.nim"
     var
@@ -149,9 +150,11 @@ suite "giddy up, pardner":
       for n in things.items:
         if n != nil:
           result &= $n & "\n"
+
     for thing in cloned.commitsForSpec(@[dotnimble]):
       check thing.isOk
       things.add thing.get
+
     check things.len > 10
     block found:
       for thing in things.items:
