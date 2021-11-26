@@ -43,6 +43,7 @@ export badresults
 const
   GIT_DIFF_OPTIONS_VERSION* = 1
   GIT_STATUS_OPTIONS_VERSION* = 1
+  GIT_CLONE_OPTIONS_VERSION* = 1
   GIT_CHECKOUT_OPTIONS_VERSION* = 1
 
 # git_strarray_dispose replaces git_strarray_free in >v1.0.1
@@ -421,7 +422,7 @@ proc free*(s: string) =
   ## for template compatability only
   discard
 
-proc kind*(obj: GitObject | GitCommit | GitTag): GitObjectKind =
+proc kind(obj: GitObject | GitCommit | GitTag): GitObjectKind =
   git_object_type(cast[GitObject](obj))
 
 proc newThing(obj: GitObject | GitCommit | GitTag): GitThing =
@@ -699,10 +700,9 @@ proc message*(thing: GitThing): string =
   of GIT_OBJECT_COMMIT:
     result = cast[GitCommit](thing.o).message
   else:
-    raise newException(
-      ValueError,
+    raise ValueError.newException:
       "Cannot get message for git object " &
-        $thing & " (kind was '" & $thing.kind & "')")
+        $thing & " (kind was '" & $thing.kind & "')"
 
 proc summary*(commit: GitCommit): string =
   ## produce a summary for a given commit
@@ -719,10 +719,9 @@ proc summary*(thing: GitThing): string =
   of GIT_OBJECT_COMMIT:
     result = cast[GitCommit](thing.o).summary
   else:
-    raise newException(
-      ValueError,
+    raise ValueError.newException:
       "Cannot get summary for git object " &
-        $thing & " (kind was '" & $thing.kind & "')")
+        $thing & " (kind was '" & $thing.kind & "')"
 
   result = result.strip
 
@@ -803,11 +802,7 @@ proc clone*(uri: Uri; path: string; branch = ""): GitResult[GitRepository] =
     var
       options = cast[ptr git_clone_options](sizeof(git_clone_options).alloc)
     try:
-      #[
-        withResultOf git_clone_options_init(options, GIT_CLONE_OPTIONS_VERSION):
-          discard
-      ]#
-      withResultOf git_clone_options_init(options, 1):
+      withResultOf git_clone_options_init(options, GIT_CLONE_OPTIONS_VERSION):
         if branch != "":
           options.checkout_branch = branch
         var
@@ -839,9 +834,7 @@ proc repositoryOpen*(path: string): GitResult[GitRepository] =
   ## open a repository by path; the repository must be freed
   withGit:
     var repo: GitRepository
-
-    let code = git_repository_open(addr repo, path)
-    withResultOf code:
+    withResultOf git_repository_open(addr repo, path):
       assert repo != nil
       result.ok repo
 
@@ -949,8 +942,7 @@ proc lookupThing*(repo: GitRepository; name: string): GitResult[GitThing] =
   ## try to look some thing up in the repository with the given name
   withGit:
     var obj: GitObject
-    let res = git_revparse_single(addr obj, repo, name)
-    withResultOf res:
+    withResultOf git_revparse_single(addr obj, repo, name):
       assert obj.kind != GIT_OBJECT_INVALID
       result.ok newThing(obj)
 
@@ -1202,14 +1194,11 @@ proc treeEntryToThing*(repo: GitRepository;
       assert obj != nil
       result.ok newThing(obj)
 
-#proc treeWalk*(tree: GitTree; mode: GitTreeWalkMode; callback: git_treewalk_cb;
-#               payload: pointer): GitResultCode =
 proc treeWalk*(tree: GitTree; mode: git_treewalk_mode; callback: git_treewalk_cb;
                payload: pointer): git_error_code =
   ## walk a tree and run a callback on every entry
   withGit:
-    result = git_tree_walk(
-      tree, to_c_git_treewalk_mode(mode), callback, payload).grc
+    result = git_tree_walk(tree, to_c_git_treewalk_mode(mode), callback, payload).grc
 
 proc treeWalk*(tree: GitTree; mode: git_treewalk_mode): GitResult[GitTreeEntries] =
   ## try to walk a tree and return a sequence of its entries
@@ -1608,8 +1597,7 @@ iterator branches*(repo: GitRepository;
         var
           branch: GitReference = nil
         # depending on whether we were able to advance,
-        code = git_branch_next(
-          addr branch, unsafeAddr list, iter).grc
+        code = git_branch_next(addr branch, unsafeAddr list, iter).grc
 
         case code:
         of GIT_OK:
