@@ -18,7 +18,9 @@ We test with `libgit2-1.3.0` though earlier versions may work.
 This gives some idea for the usage:
 
 ```nim
+import logging
 import gittyup
+import uri
 
 # a simple example of cloning a repo
 block cloning:
