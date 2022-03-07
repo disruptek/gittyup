@@ -1071,8 +1071,10 @@ iterator status*(repository: GitRepository; show: GitStatusShow;
       dealloc options
 
 proc checkoutTree*(repo: GitRepository; thing: GitThing;
+                   paths: seq[string] = @[];
                    strategy = defaultCheckoutStrategy): GitResultCode =
-  ## checkout a repository using a thing
+  ## checkout a repository using a thing; supply paths to
+  ## limit the checkout to, uh, those particular paths
   withGit:
     var
       options = cast[ptr git_checkout_options](sizeof(git_checkout_options).alloc)
@@ -1099,12 +1101,23 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
 
       # setup our checkout options
       result = git_checkout_options_init(options,
-                                        GIT_CHECKOUT_OPTIONS_VERSION).grc
+                                         GIT_CHECKOUT_OPTIONS_VERSION).grc
       if result != GIT_OK:
         break
 
       # reset the strategy per flags
       options.checkout_strategy = setFlags(strategy)
+
+      # add any supplied paths or globs; blow away anything in options
+      options.paths.count = paths.len.cuint
+      options.paths.strings =
+        if paths.len > 0:
+          cast[ptr cstring](allocCStringArray(paths))
+        else:
+          cast[ptr cstring](nil)
+      defer:
+        if options.paths.strings != nil:
+          deallocCStringArray(cast[cstringArray](options.paths.strings))
 
       # checkout the tree using the commit we fetched
       result = git_checkout_tree(repo, cast[GitObject](commit), options).grc
@@ -1119,14 +1132,16 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
         result = git_repository_set_head(repo, name).grc
 
 proc checkoutTree*(repo: GitRepository; reference: string;
+                   paths: seq[string] = @[];
                    strategy = defaultCheckoutStrategy): GitResultCode =
-  ## checkout a repository using a reference string
+  ## checkout a repository using a reference string; supply paths to
+  ## limit the checkout to, uh, those particular paths
   withGit:
     block:
       thing := repo.lookupThing(reference):
         setResultAsError(result, code)
         break
-      result = repo.checkoutTree(thing, strategy = strategy)
+      result = repo.checkoutTree(thing, paths = paths, strategy = strategy)
 
 proc checkoutHead*(repo: GitRepository;
                    strategy = defaultCheckoutStrategy): GitResultCode =
