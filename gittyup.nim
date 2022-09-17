@@ -843,6 +843,21 @@ proc openRepository*(path: string): GitResult[GitRepository]
   ## alias for `repositoryOpen`
   result = repositoryOpen(path)
 
+proc fetch*(repo: GitRepository): GitResultCode =
+  withGit:
+    var
+      fetchOpts: git_fetch_options
+      refSpecs: git_strarray
+      remote: ptr git_remote
+    try:
+      withResultOf git_fetch_options_init(addr fetchOpts, GIT_CLONE_OPTIONS_VERSION):
+        withResultOf git_remote_lookup(addr remote, repo, "origin"):
+          result = git_remote_fetch(remote, addr refSpecs, addr fetchOpts, "fetch").grc
+    finally:
+      git_strarray_dispose(addr refSpecs)
+      dealloc addr fetchOpts
+      dealloc addr remote
+
 proc repositoryHead*(repo: GitRepository): GitResult[GitReference] =
   ## fetch the reference for the repository's head; the reference must be freed
   withGit:
