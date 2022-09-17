@@ -162,3 +162,10 @@ suite "giddy up, pardner":
           break found
         free thing
       fail "unable to find v102"
+
+  ## fetch
+  test:
+    cloned := cloneme.clone(tmpdir):
+      fail dumpError(code)
+    check GIT_REPOSITORY_STATE_NONE == cloned.repositoryState
+    check cloned.fetch() == GIT_OK
