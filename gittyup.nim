@@ -873,6 +873,18 @@ proc headReference*(repo: GitRepository): GitResult[GitReference] =
   ## alias for repositoryHead
   result = repositoryHead(repo)
 
+proc getRemoteNames*(repo: GitRepository): seq[string] =
+  ## get names of all remotes
+  withGit:
+    var remotesList: git_str_array
+    try:
+      withResultOf git_remote_list(addr remotesList, repo):
+        let remoteNames = cstringArrayToSeq(cast[cstringArray](remotesList.strings), remotesList.count)
+        for name in remoteNames:
+          result.add(name.string)
+    finally:
+      git_strarray_dispose(addr remotesList)
+
 proc remoteLookup*(repo: GitRepository; name: string): GitResult[GitRemote] =
   ## get the remote by name; the remote must be freed
   withGit:
