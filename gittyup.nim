@@ -45,6 +45,7 @@ const
   GIT_STATUS_OPTIONS_VERSION* = 1
   GIT_CLONE_OPTIONS_VERSION* = 1
   GIT_CHECKOUT_OPTIONS_VERSION* = 1
+  GIT_FETCH_OPTIONS_VERSION* = 1
 
 # git_strarray_dispose replaces git_strarray_free in >v1.0.1
 when not compiles(git_strarray_dispose):
@@ -843,15 +844,16 @@ proc openRepository*(path: string): GitResult[GitRepository]
   ## alias for `repositoryOpen`
   result = repositoryOpen(path)
 
-proc fetch*(repo: GitRepository): GitResultCode =
+proc fetch*(repo: GitRepository, remoteName: string): GitResultCode =
+  ## fetch from repo at given remoteName
   withGit:
     var
       fetchOpts: git_fetch_options
       refSpecs: git_strarray
       remote: ptr git_remote
     try:
-      withResultOf git_fetch_options_init(addr fetchOpts, GIT_CLONE_OPTIONS_VERSION):
-        withResultOf git_remote_lookup(addr remote, repo, "origin"):
+      withResultOf git_fetch_options_init(addr fetchOpts, GIT_FETCH_OPTIONS_VERSION):
+        withResultOf git_remote_lookup(addr remote, repo, remoteName.cstring):
           result = git_remote_fetch(remote, addr refSpecs, addr fetchOpts, "fetch").grc
     finally:
       git_strarray_dispose(addr refSpecs)
