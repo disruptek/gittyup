@@ -168,4 +168,4 @@ suite "giddy up, pardner":
     cloned := cloneme.clone(tmpdir):
       fail dumpError(code)
     check GIT_REPOSITORY_STATE_NONE == cloned.repositoryState
-    check cloned.fetch("origin") == GIT_OK
+    check cloned.fetchRemote("origin") == GIT_OK
