@@ -163,7 +163,7 @@ suite "giddy up, pardner":
         free thing
       fail "unable to find v102"
 
-  ## fetch
+  ## fetchRemote
   test:
     cloned := cloneme.clone(tmpdir):
       fail dumpError(code)
