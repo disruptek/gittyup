@@ -844,7 +844,7 @@ proc openRepository*(path: string): GitResult[GitRepository]
   ## alias for `repositoryOpen`
   result = repositoryOpen(path)
 
-proc fetch*(repo: GitRepository, remoteName: string): GitResultCode =
+proc fetchRemote*(repo: GitRepository, remoteName: string): GitResultCode =
   ## fetch from repo at given remoteName
   withGit:
     var
