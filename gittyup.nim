@@ -885,6 +885,22 @@ proc getRemoteNames*(repo: GitRepository): seq[string] =
     finally:
       git_strarray_dispose(addr remotesList)
 
+proc fetchRemotes*(repo: GitRepository, remoteNames: seq[string]): seq[GitResultCode] =
+  ## fetch from repo at given remoteNames
+  withGit:
+    for remoteName in remoteNames:
+      result.add(fetchRemote(repo, remoteName))
+
+proc remoteLookup*(repo: GitRepository; name: string): GitResult[GitRemote] =
+  ## get the remote by name; the remote must be freed
+  withGit:
+    var
+      remote: GitRemote
+    withResultOf git_remote_lookup(addr remote, repo, name):
+      assert remote != nil
+      result.ok remote
+
+
 proc remoteLookup*(repo: GitRepository; name: string): GitResult[GitRemote] =
   ## get the remote by name; the remote must be freed
   withGit:
