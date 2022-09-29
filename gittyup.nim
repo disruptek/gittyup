@@ -900,16 +900,6 @@ proc remoteLookup*(repo: GitRepository; name: string): GitResult[GitRemote] =
       assert remote != nil
       result.ok remote
 
-
-proc remoteLookup*(repo: GitRepository; name: string): GitResult[GitRemote] =
-  ## get the remote by name; the remote must be freed
-  withGit:
-    var
-      remote: GitRemote
-    withResultOf git_remote_lookup(addr remote, repo, name):
-      assert remote != nil
-      result.ok remote
-
 proc remoteRename*(repo: GitRepository; prior: string;
                    next: string): GitResult[seq[string]] =
   ## rename a remote
