@@ -858,7 +858,7 @@ proc fetchRemote*(repo: GitRepository, remoteName: string): GitResultCode =
     finally:
       git_strarray_dispose(addr refSpecs)
       dealloc addr fetchOpts
-      dealloc addr remote
+      free remote
 
 proc repositoryHead*(repo: GitRepository): GitResult[GitReference] =
   ## fetch the reference for the repository's head; the reference must be freed
