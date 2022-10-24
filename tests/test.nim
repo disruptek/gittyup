@@ -170,10 +170,3 @@ suite "giddy up, pardner":
     check GIT_REPOSITORY_STATE_NONE == cloned.repositoryState
     check cloned.fetchRemote("origin") == GIT_OK
 
-  ## fetchRemotes
-  test:
-    cloned := cloneme.clone(tmpdir):
-      fail dumpError(code)
-    check GIT_REPOSITORY_STATE_NONE == cloned.repositoryState
-    for gitResult in cloned.fetchRemotes(getRemoteNames(cloned)):
-      check gitResult == GIT_OK
