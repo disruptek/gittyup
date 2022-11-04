@@ -55,7 +55,7 @@ when not compiles(git_strarray_dispose):
 type
   # separating out stuff we free via routines from libgit2
   GitHeapGits = git_repository | git_reference | git_remote | git_tag |
-                git_strarray | git_object | git_commit | git_status_list |
+                git_object | git_commit | git_status_list |
                 git_annotated_commit | git_tree_entry | git_revwalk | git_buf |
                 git_pathspec | git_tree | git_diff | git_pathspec_match_list |
                 git_branch_iterator | git_signature
@@ -94,7 +94,8 @@ type
   GitRemote* = ptr git_remote
   GitReference* = ptr git_reference
   GitRepository* = ptr git_repository
-  GitStrArray* = ptr git_strarray
+  GitStrArray* = distinct git_strarray  ## strings freed by libgit2
+  GittyStrArray* = distinct git_strarray  ## strings freed by nim
   GitTag* = ptr git_tag
   GitCommit* = ptr git_commit
   GitStatus* = ptr git_status_entry
@@ -175,10 +176,10 @@ const
 proc dumpError*(code: GitResultCode): string =
   ## retrieves the last git error message
   let err = git_error_last()
-  if err != nil:
+  if not err.isNil:
     result = $gec(err.klass) & " error: " & $err.message
     when defined(gitErrorsAreFatal):
-      raise newException(Defect, result)
+      raise Defect.newException result
 
 template dumpError() =
   let emsg = GIT_OK.dumpError
@@ -277,7 +278,6 @@ proc loadCerts(): bool =
   if not result:
     dumpError()
 
-
 proc initGit(): bool =
   let code = git_libgit2_init()
   result = code > 0
@@ -340,9 +340,9 @@ template withResultOf(gitsaid: cint | GitResultCode; body: untyped) =
 proc free*[T: GitHeapGits](point: ptr T) =
   ## perform a free of a git-managed pointer
   withGit:
-    if point == nil:
+    if point.isNil:
       when not defined(release) and not defined(danger):
-        raise newException(Defect, "attempt to free nil git heap object")
+        raise Defect.newException "attempt to free nil git heap object"
     else:
       when defined(debugGit):
         debug "\t~> freeing git " & $typeof(point)
@@ -352,8 +352,6 @@ proc free*[T: GitHeapGits](point: ptr T) =
         git_reference_free(point)
       elif T is git_remote:
         git_remote_free(point)
-      elif T is git_strarray:
-        git_strarray_dispose(point)
       elif T is git_tag:
         git_tag_free(point)
       elif T is git_commit:
@@ -389,7 +387,7 @@ proc free*[T: GitHeapGits](point: ptr T) =
 
 proc free*[T: NimHeapGits](point: ptr T) =
   ## perform a free of a nim-alloced pointer to git data
-  if point == nil:
+  if point.isNil:
     when not defined(release) or not defined(danger):
       raise Defect.newException "attempt to free nil nim heap git object"
   else:
@@ -401,7 +399,7 @@ proc free*[T: NimHeapGits](point: ptr T) =
 
 proc free*(thing: sink GitThing) =
   ## free a git thing and its gitobject contents appropriately
-  assert thing != nil
+  assert not thing.isNil
   case thing.kind:
   of GIT_OBJECT_COMMIT:
     free(cast[GitCommit](thing.o))
@@ -423,12 +421,51 @@ proc free*(s: string) =
   ## for template compatability only
   discard
 
+template addr(gstrings: GitStrArray | GittyStrArray): ptr git_strarray =
+  ## convenience for passing git_strarray-like values
+  (ptr git_strarray)(unsafeAddr gstrings.git_strarray)
+
+proc free*(gstrings: var GitStrArray) =
+  ## free a git_strarray allocated by libgit2
+  template gstrs: git_strarray = cast[git_strarray](gstrings)
+  if not gstrs.strings.isNil:
+    git_strarray_dispose(addr gstrings)
+    assert gstrs.strings.isNil
+
+proc free*(gstrings: var GittyStrArray) =
+  ## free a git_strarray allocated by nim
+  template gstrs: git_strarray = gstrings.git_strarray
+  if not gstrs.strings.isNil:
+    dealloc gstrs.strings
+    gstrs.strings = nil
+
+iterator items(gstrings: GitStrArray | GittyStrArray): string =
+  ## emit the members of a string array
+  assert not gstrings.git_strarray.strings.isNil
+  for index in 0..<gstrings.git_strarray.count:
+    yield $gstrings.git_strarray.strings[index]
+
+proc toStrArray*(values: openArray[string]): GittyStrArray =
+  ## future converter (?) to nim-alloc'd string array
+  template gstrs: git_strarray = result.git_strarray
+  gstrs.count = values.len.cuint
+  if gstrs.count > 0:
+    gstrs.strings = cast[ptr cstring](allocCStringArray values)
+
+proc toStringSeq*(gstrings: GitStrArray | GittyStrArray): seq[string] =
+  ## future converter (?) from nim-or-libgit-alloc'd string arrays
+  template gstrs: git_strarray = gstrings.git_strarray
+  if gstrs.count > 0:
+    assert not gstrs.strings.isNil
+    result = cstringArrayToSeq(cast[cstringArray](gstrs.strings),
+                               gstrs.count.int)
+
 proc kind(obj: GitObject | GitCommit | GitTag): GitObjectKind =
   git_object_type(cast[GitObject](obj))
 
 proc newThing(obj: GitObject | GitCommit | GitTag): GitThing =
   ## turn a git object into a thing
-  assert obj != nil
+  assert not obj.isNil
   GitThing(kind: obj.kind, o: cast[GitObject](obj))
 
 proc newThing(thing: GitThing): GitThing =
@@ -441,7 +478,7 @@ proc newThing(thing: GitThing): GitThing =
 
 proc short*(oid: GitOid; size: int): GitResult[string] =
   ## shorten an oid to a string of the given length
-  assert oid != nil
+  assert not oid.isNil
   var
     output: cstring
   withGit:
@@ -453,63 +490,64 @@ proc short*(oid: GitOid; size: int): GitResult[string] =
 
 proc url*(remote: GitRemote): Uri =
   ## retrieve the url of a remote
-  assert remote != nil
+  assert not remote.isNil
   withGit:
     result = parseUri($git_remote_url(remote)).normalizeUrl
 
 proc oid*(entry: GitTreeEntry): GitOid =
   ## retrieve the oid of the input
-  assert entry != nil
+  assert not entry.isNil
   result = git_tree_entry_id(entry)
-  assert result != nil
+  assert not result.isNil
 
 proc oid*(got: GitReference): GitOid =
   ## retrieve the oid of the input
-  assert got != nil
+  assert not got.isNil
   result = git_reference_target(got)
-  assert result != nil
+  assert not result.isNil
 
 proc oid*(obj: GitObject): GitOid =
   ## retrieve the oid of the input
-  assert obj != nil
+  assert not obj.isNil
   result = git_object_id(obj)
-  assert result != nil
+  assert not result.isNil
 
 proc oid*(thing: GitThing): GitOid =
   ## retrieve the oid of the input
-  assert thing != nil and thing.o != nil
+  assert not thing.isNil
+  assert not thing.o.isNil
   result = thing.o.oid
-  assert result != nil
+  assert not result.isNil
 
 proc oid*(tag: GitTag): GitOid =
   ## retrieve the oid of the input
-  assert tag != nil
+  assert not tag.isNil
   result = git_tag_id(tag)
-  assert result != nil
+  assert not result.isNil
 
 func name*(got: GitReference): string =
   ## retrieve the name of the input
-  assert got != nil
+  assert not got.isNil
   result = $git_reference_name(got)
 
 func name*(entry: GitTreeEntry): string =
   ## retrieve the name of the input
-  assert entry != nil
+  assert not entry.isNil
   result = $git_tree_entry_name(entry)
 
 func name*(remote: GitRemote): string =
   ## retrieve the name of the input
-  assert remote != nil
+  assert not remote.isNil
   result = $git_remote_name(remote)
 
 func isTag*(got: GitReference): bool =
   ## true if the supplied reference is a tag
-  assert got != nil
+  assert not got.isNil
   result = git_reference_is_tag(got) == 1
 
 proc flags*(status: GitStatus): set[GitStatusFlag] =
   ## produce the set of flags indicating the status of the file
-  assert status != nil
+  assert not status.isNil
   for flag in validGitStatusFlags.items:
     if flag.ord.uint == bitand(status.status.uint, flag.ord.uint):
       result.incl flag
@@ -519,61 +557,61 @@ proc repositoryPath*(repo: GitRepository): string =
   result = $git_repository_path(repo)
 
 func `$`*(tags: GitTagTable): string =
-  assert tags != nil
+  assert not tags.isNil
   result = "{poorly-rendered tagtable}"
 
 func `$`*(ps: GitPathSpec): string =
-  assert ps != nil
+  assert not ps.isNil
   result = "{poorly-rendered pathspec}"
 
 func `$`*(walker: GitRevWalker): string =
-  assert walker != nil
+  assert not walker.isNil
   result = "{poorly-rendered revwalker}"
 
 func `$`*(remote: GitRemote): string =
-  assert remote != nil
+  assert not remote.isNil
   result = remote.name
 
 func `$`*(repo: GitRepository): string =
-  assert repo != nil
+  assert not repo.isNil
   result = repositoryPath(repo)
 
 func `$`*(buffer: git_buf): string =
   result = $cast[cstring](buffer)
 
 func `$`*(buffer: ptr git_buf): string =
-  assert buffer != nil
+  assert not buffer.isNil
   result = $cast[cstring](buffer[])
 
 func `$`*(annotated: ptr git_annotated_commit): string =
-  assert annotated != nil
+  assert not annotated.isNil
   result = $git_annotated_commit_ref(annotated)
 
 func `$`*(oid: GitOid): string =
-  assert oid != nil
+  assert not oid.isNil
   result = $git_oid_tostr_s(oid)
 
 func `$`*(tag: GitTag): string =
-  assert tag != nil
+  assert not tag.isNil
   let
     name = git_tag_name(tag)
-  if name != nil:
+  if name.isNil:
     result = $name
 
 func `$`*(reference: GitReference): string =
-  assert reference != nil
+  assert not reference.isNil
   if reference.isTag:
     result = reference.name
   else:
     result = $reference.oid
 
 func `$`*(entry: GitTreeEntry): string =
-  assert entry != nil
+  assert not entry.isNil
   result = entry.name
 
 func `$`*(obj: GitObject): string =
   ## string representation of git object
-  assert obj != nil
+  assert not obj.isNil
   let
     kind = obj.kind
   case kind:
@@ -583,15 +621,16 @@ func `$`*(obj: GitObject): string =
     result = $kind & "-" & $obj.git_object_id
 
 func `$`*(commit: GitCommit): string =
-  assert commit != nil
+  assert not commit.isNil
   result = $cast[GitObject](commit)
 
 func `$`*(thing: GitThing): string =
-  assert thing != nil and thing.o != nil
+  assert not thing.isNil
+  assert not thing.o.isNil
   result = $thing.o
 
 func `$`*(status: GitStatus): string =
-  assert status != nil
+  assert not status.isNil
   for flag in status.flags.items:
     if result != "":
       result &= ","
@@ -599,16 +638,17 @@ func `$`*(status: GitStatus): string =
 
 proc copy*(commit: GitCommit): GitResult[GitCommit] =
   ## create a copy of the commit; free it with free
-  assert commit != nil
+  assert not commit.isNil
   var
     dupe: GitCommit
   withResultOf git_commit_dup(addr dupe, commit):
-    assert dupe != nil
+    assert not dupe.isNil
     result.ok dupe
 
 proc copy*(thing: GitThing): GitResult[GitThing] =
   ## create a copy of the thing; free it with free
-  assert thing != nil and thing.o != nil
+  assert not thing.isNil
+  assert not thing.o.isNil
   case thing.kind:
   of GIT_OBJECT_INVALID:
     result.err GIT_EINVALID
@@ -630,7 +670,7 @@ proc copy*(thing: GitThing): GitResult[GitThing] =
 
 proc copy*(oid: GitOid): GitResult[GitOid] =
   ## create a copy of the oid; free it with dealloc
-  assert oid != nil
+  assert not oid.isNil
   var
     copied = cast[GitOid](sizeof(git_oid).alloc)
   withResultOf git_oid_cpy(copied, oid):
@@ -638,7 +678,7 @@ proc copy*(oid: GitOid): GitResult[GitOid] =
 
 proc branchName*(got: GitReference): string =
   ## fetch a branch name assuming the reference is a branch
-  assert got != nil
+  assert not got.isNil
   withGit:
     # we're going to assume that the reference name is
     # no longer than the branch_name; we're using this
@@ -654,27 +694,28 @@ proc branchName*(got: GitReference): string =
 
 proc isBranch*(got: GitReference): bool =
   ## true if the supplied reference is a branch
-  assert got != nil
+  assert not got.isNil
   withGit:
     result = git_reference_is_branch(got) == 1
 
 proc owner*(thing: GitThing): GitRepository =
   ## retrieve the repository that owns this thing
-  assert thing != nil and thing.o != nil
+  assert not thing.isNil
+  assert not thing.o.isNil
   result = git_object_owner(thing.o)
-  assert result != nil
+  assert not result.isNil
 
 proc owner*(commit: GitCommit): GitRepository =
   ## retrieve the repository that owns this commit
-  assert commit != nil
+  assert not commit.isNil
   result = git_commit_owner(commit)
-  assert result != nil
+  assert not result.isNil
 
 proc owner*(reference: GitReference): GitRepository =
   ## retrieve the repository that owns this reference
-  assert reference != nil
+  assert not reference.isNil
   result = git_reference_owner(reference)
-  assert result != nil
+  assert not result.isNil
 
 proc setFlags[T](flags: seq[T] | set[T] | HashSet[T]): cuint =
   for flag in flags.items:
@@ -682,19 +723,20 @@ proc setFlags[T](flags: seq[T] | set[T] | HashSet[T]): cuint =
 
 proc message*(commit: GitCommit): string =
   ## retrieve the message associated with a git commit
-  assert commit != nil
+  assert not commit.isNil
   withGit:
     result = $git_commit_message(commit)
 
 proc message*(tag: GitTag): string =
   ## retrieve the message associated with a git tag
-  assert tag != nil
+  assert not tag.isNil
   withGit:
     result = $git_tag_message(tag)
 
 proc message*(thing: GitThing): string =
   ## retrieve the message associated with a git thing
-  assert thing != nil and thing.o != nil
+  assert not thing.isNil
+  assert not thing.o.isNil
   case thing.kind:
   of GIT_OBJECT_TAG:
     result = cast[GitTag](thing.o).message
@@ -708,12 +750,13 @@ proc message*(thing: GitThing): string =
 proc summary*(commit: GitCommit): string =
   ## produce a summary for a given commit
   withGit:
-    assert commit != nil
+    assert not commit.isNil
     result = $git_commit_summary(commit)
 
 proc summary*(thing: GitThing): string =
   ## produce a summary for a git thing
-  assert thing != nil and thing.o != nil
+  assert not thing.isNil
+  assert not thing.o.isNil
   case thing.kind:
   of GIT_OBJECT_TAG:
     result = cast[GitTag](thing.o).message
@@ -728,7 +771,7 @@ proc summary*(thing: GitThing): string =
 
 proc free*(table: sink GitTagTable) =
   ## free a tag table
-  assert table != nil
+  assert not table.isNil
   withGit:
     when defined(debugGit):
       debug "\t~> freeing nim " & $typeof(table)
@@ -760,42 +803,42 @@ proc free*(table: sink GitTagTable) =
 
 proc hash*(oid: GitOid): Hash =
   ## the hash of a git oid is a function of its string representation
-  assert oid != nil
+  assert not oid.isNil
   var h: Hash = 0
   h = h !& hash($oid)
   result = !$h
 
 proc hash*(tag: GitTag): Hash =
   ## two tags are the same if they have the same name
-  assert tag != nil
+  assert not tag.isNil
   var h: Hash = 0
   h = h !& hash($tag)
   result = !$h
 
 proc hash*(thing: GitThing): Hash =
   ## two git things are unique unless they share the same oid
-  assert thing != nil
+  assert not thing.isNil
   var h: Hash = 0
   h = h !& hash(thing.oid)
   result = !$h
 
 proc commit*(thing: GitThing): GitCommit =
   ## turn a thing into its commit
-  assert thing != nil and thing.kind == GIT_OBJECT_COMMIT
+  assert not thing.isNil and thing.kind == GIT_OBJECT_COMMIT
   result = cast[GitCommit](thing.o)
-  assert result != nil
+  assert not result.isNil
 
 proc committer*(thing: GitThing): GitSignature =
   ## get the committer of a thing that's a commit
-  assert thing != nil and thing.kind == GIT_OBJECT_COMMIT
+  assert not thing.isNil and thing.kind == GIT_OBJECT_COMMIT
   result = git_commit_committer(cast[GitCommit](thing.o))
-  assert result != nil
+  assert not result.isNil
 
 proc author*(thing: GitThing): GitSignature =
   ## get the author of a thing that's a commit
-  assert thing != nil and thing.kind == GIT_OBJECT_COMMIT
+  assert not thing.isNil and thing.kind == GIT_OBJECT_COMMIT
   result = git_commit_author(cast[GitCommit](thing.o))
-  assert result != nil
+  assert not result.isNil
 
 proc clone*(uri: Uri; path: string; branch = ""): GitResult[GitRepository] =
   ## clone a repository
@@ -809,7 +852,7 @@ proc clone*(uri: Uri; path: string; branch = ""): GitResult[GitRepository] =
         var
           repo: GitRepository
         withResultOf git_clone(addr repo, cstring($uri), path, options):
-          assert repo != nil
+          assert not repo.isNil
           result.ok repo
     finally:
       dealloc options
@@ -826,7 +869,7 @@ proc setHeadDetached*(repo: GitRepository; reference: string): GitResultCode =
       oid: GitOid = cast[GitOid](sizeof(git_oid).alloc)
     try:
       withResultOf git_oid_fromstr(oid, reference):
-        assert oid != nil
+        assert not oid.isNil
         result = repo.setHeadDetached(oid)
     finally:
       free oid
@@ -836,7 +879,7 @@ proc repositoryOpen*(path: string): GitResult[GitRepository] =
   withGit:
     var repo: GitRepository
     withResultOf git_repository_open(addr repo, path):
-      assert repo != nil
+      assert not repo.isNil
       result.ok repo
 
 proc openRepository*(path: string): GitResult[GitRepository]
@@ -844,21 +887,25 @@ proc openRepository*(path: string): GitResult[GitRepository]
   ## alias for `repositoryOpen`
   result = repositoryOpen(path)
 
-proc fetchRemote*(repo: GitRepository, remoteName: string): GitResultCode =
-  ## fetch from repo at given remoteName
+proc fetchRemote*(repo: GitRepository; remoteName: string; refSpecs: GittyStrArray): GitResultCode =
+  ## fetch from repo at `remoteName` using provided `refSpecs`
   withGit:
     var
       fetchOpts: git_fetch_options
-      refSpecs: git_strarray
-      remote: ptr git_remote
-    try:
-      withResultOf git_fetch_options_init(addr fetchOpts, GIT_FETCH_OPTIONS_VERSION):
-        withResultOf git_remote_lookup(addr remote, repo, remoteName.cstring):
+      remote: GitRemote
+    withResultOf git_fetch_options_init(addr fetchOpts, GIT_FETCH_OPTIONS_VERSION):
+      withResultOf git_remote_lookup(addr remote, repo, remoteName.cstring):
+        assert not remote.isNil
+        try:
           result = git_remote_fetch(remote, addr refSpecs, addr fetchOpts, "fetch").grc
-    finally:
-      git_strarray_dispose(addr refSpecs)
-      dealloc addr fetchOpts
-      free remote
+        finally:
+          free remote
+
+proc fetchRemote*(repo: GitRepository; remoteName: string): GitResultCode =
+  ## fetch from repo at given remoteName
+  var
+    refSpecs: GittyStrArray
+  fetchRemote(repo, remoteName, refSpecs)
 
 proc repositoryHead*(repo: GitRepository): GitResult[GitReference] =
   ## fetch the reference for the repository's head; the reference must be freed
@@ -866,30 +913,30 @@ proc repositoryHead*(repo: GitRepository): GitResult[GitReference] =
     var
       head: GitReference
     withResultOf git_repository_head(addr head, repo):
-      assert head != nil
+      assert not head.isNil
       result.ok head
 
 proc headReference*(repo: GitRepository): GitResult[GitReference] =
   ## alias for repositoryHead
   result = repositoryHead(repo)
 
-proc getRemoteNames*(repo: GitRepository): seq[string] =
+proc getRemoteNames*(repo: GitRepository): GitResult[seq[string]] =
   ## get names of all remotes
   withGit:
-    var remotesList: git_str_array
+    var
+      list: GitStrArray
     try:
-      withResultOf git_remote_list(addr remotesList, repo):
-        let remoteNames = cstringArrayToSeq(cast[cstringArray](remotesList.strings), remotesList.count)
-        for name in remoteNames:
-          result.add(name.string)
+      withResultOf git_remote_list(addr list, repo):
+        result.ok list.toStringSeq()
     finally:
-      git_strarray_dispose(addr remotesList)
+      free list
 
 proc fetchRemotes*(repo: GitRepository, remoteNames: seq[string]): seq[GitResultCode] =
   ## fetch from repo at given remoteNames
   withGit:
-    for remoteName in remoteNames:
-      result.add(fetchRemote(repo, remoteName))
+    for remoteName in remoteNames.items:
+      result.add:
+        fetchRemote(repo, remoteName)
 
 proc remoteLookup*(repo: GitRepository; name: string): GitResult[GitRemote] =
   ## get the remote by name; the remote must be freed
@@ -897,7 +944,7 @@ proc remoteLookup*(repo: GitRepository; name: string): GitResult[GitRemote] =
     var
       remote: GitRemote
     withResultOf git_remote_lookup(addr remote, repo, name):
-      assert remote != nil
+      assert not remote.isNil
       result.ok remote
 
 proc remoteRename*(repo: GitRepository; prior: string;
@@ -905,16 +952,12 @@ proc remoteRename*(repo: GitRepository; prior: string;
   ## rename a remote
   withGit:
     var
-      list: git_strarray
-    withResultOf git_remote_rename(addr list, repo, prior, next):
-      try:
-        if list.count == 0'u:
-          result.ok newSeq[string]()
-        else:
-          result.ok cstringArrayToSeq(cast[cstringArray](list.strings),
-                                      list.count)
-      finally:
-        git_strarray_dispose(addr list)
+      problems: GitStrArray
+    try:
+      withResultOf git_remote_rename(addr problems, repo, prior, next):
+        result.ok problems.toStringSeq()
+    finally:
+      free problems
 
 proc remoteDelete*(repo: GitRepository; name: string): GitResultCode =
   ## delete a remote from the repository
@@ -928,7 +971,7 @@ proc remoteCreate*(repo: GitRepository; name: string;
     var
       remote: GitRemote
     withResultOf git_remote_create(addr remote, repo, name.cstring, cstring($url)):
-      assert remote != nil
+      assert not remote.isNil
       result.ok remote
 
 proc `==`*(a, b: GitOid): bool =
@@ -945,33 +988,33 @@ proc `==`*(a, b: GitOid): bool =
 
 proc targetId*(thing: GitThing): GitOid =
   ## find the target oid to which a tag points
+  assert not thing.isNil
+  assert not thing.o.isNil
   withGit:
     result = git_tag_target_id(cast[GitTag](thing.o))
-    assert result != nil
+    assert not result.isNil
 
 proc target*(thing: GitThing): GitResult[GitThing] =
   ## find the thing to which a tag points
+  assert not thing.isNil
+  assert not thing.o.isNil
   withGit:
     var
       obj: GitObject
     withResultOf git_tag_target(addr obj, cast[GitTag](thing.o)):
-      assert obj != nil
+      assert not obj.isNil
       result.ok newThing(obj)
 
 proc tagList*(repo: GitRepository): GitResult[seq[string]] =
   ## retrieve a list of tags from the repo
   withGit:
     var
-      list: git_strarray
+      list: GitStrArray
     withResultOf git_tag_list(addr list, repo):
       try:
-        if list.count == 0'u:
-          result.ok newSeq[string]()
-        else:
-          result.ok cstringArrayToSeq(cast[cstringArray](list.strings),
-                                      list.count)
+        result.ok list.toStringSeq()
       finally:
-        git_strarray_dispose(addr list)
+        free list
 
 proc lookupThing*(repo: GitRepository; name: string): GitResult[GitThing] =
   ## try to look some thing up in the repository with the given name
@@ -987,6 +1030,8 @@ proc newTagTable*(size = 32): GitTagTable =
 
 proc addTag(tags: var GitTagTable; name: string;
             thing: var GitThing): GitResultCode =
+  assert not thing.isNil
+  assert not thing.o.isNil
   ## add a thing to the tag table, perhaps peeling it first
   # if it's not a tag, just add it to the table and move on
   if thing.kind != GIT_OBJECT_TAG:
@@ -995,17 +1040,17 @@ proc addTag(tags: var GitTagTable; name: string;
     result = GIT_OK
   else:
     # it's a tag, so attempt to dereference it
-    let
+    var
       target = thing.target
     if target.isErr:
       # my worst fears are realized
       result = target.error
     else:
       # add the thing's target to the table under the current name
-      tags[name] = target.get
+      tags[name] = get target
       result = GIT_OK
-    # free the thing; we don't need it anymore
-    free thing
+      # free the target; we don't need it anymore
+      free get(target)
 
 proc tagTable*(repo: GitRepository): GitResult[GitTagTable] =
   ## compose a table of tags and their associated references
@@ -1124,7 +1169,7 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
       if result != GIT_OK:
         break
       defer:
-        target.free
+        free target
 
       # use the oid of this target to look up the commit
       let oid = git_annotated_commit_id(target)
@@ -1132,7 +1177,7 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
       if result != GIT_OK:
         break
       defer:
-        commit.free
+        free commit
 
       # setup our checkout options
       result = git_checkout_options_init(options,
@@ -1144,15 +1189,9 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
       options.checkout_strategy = setFlags(strategy)
 
       # add any supplied paths or globs; blow away anything in options
-      options.paths.count = paths.len.cuint
-      options.paths.strings =
-        if paths.len > 0:
-          cast[ptr cstring](allocCStringArray(paths))
-        else:
-          cast[ptr cstring](nil)
+      options.paths = paths.toStrArray().git_strarray
       defer:
-        if options.paths.strings != nil:
-          deallocCStringArray(cast[cstringArray](options.paths.strings))
+        free options.paths.GittyStrArray
 
       # checkout the tree using the commit we fetched
       result = git_checkout_tree(repo, cast[GitObject](commit), options).grc
@@ -1208,7 +1247,7 @@ proc referenceDWIM*(repo: GitRepository;
     var
       refer: GitReference
     withResultOf git_reference_dwim(addr refer, repo, short):
-      assert refer != nil
+      assert not refer.isNil
       result.ok refer
 
 proc lookupTreeThing*(repo: GitRepository; path = "HEAD"): GitResult[GitThing] =
@@ -1229,7 +1268,7 @@ proc treeEntryByPath*(thing: GitThing; path: string): GitResult[GitTreeEntry] =
         var
           entry: GitTreeEntry
         withResultOf git_tree_entry_dup(addr entry, leaf):
-          assert entry != nil
+          assert not entry.isNil
           result.ok entry
       finally:
         free leaf
@@ -1241,7 +1280,7 @@ proc treeEntryToThing*(repo: GitRepository;
     var
       obj: GitObject
     withResultOf git_tree_entry_to_object(addr obj, repo, entry):
-      assert obj != nil
+      assert not obj.isNil
       result.ok newThing(obj)
 
 proc treeWalk*(tree: GitTree; mode: git_treewalk_mode; callback: git_treewalk_cb;
@@ -1262,7 +1301,7 @@ proc treeWalk*(tree: GitTree; mode: git_treewalk_mode): GitResult[GitTreeEntries
       var
         dupe: GitTreeEntry
       withResultOf git_tree_entry_dup(addr dupe, entry):
-        assert dupe != nil
+        assert not dupe.isNil
         cast[var GitTreeEntries](payload).add dupe
 
     withResultOf tree.treeWalk(mode, cast[git_treewalk_cb](walk),
@@ -1280,7 +1319,7 @@ proc newRevWalk*(repo: GitRepository): GitResult[GitRevWalker] =
     var
       walker: GitRevWalker
     withResultOf git_revwalk_new(addr walker, repo):
-      assert walker != nil
+      assert not walker.isNil
       result.ok walker
 
 proc next*(walker: GitRevWalker): GitResult[GitOid] =
@@ -1290,7 +1329,7 @@ proc next*(walker: GitRevWalker): GitResult[GitOid] =
       var
         oid: GitOid = cast[GitOid](sizeof(git_oid).alloc)
       withResultOf git_revwalk_next(oid, walker):
-        assert oid != nil
+        assert not oid.isNil
         result.ok oid
         break
       # free the oid if we couldn't use it
@@ -1311,7 +1350,7 @@ proc lookupCommit*(repo: GitRepository; oid: GitOid): GitResult[GitThing] =
     var
       commit: GitCommit
     withResultOf git_commit_lookup(addr commit, repo, oid):
-      assert commit != nil
+      assert not commit.isNil
       result.ok newThing(commit)
 
 iterator revWalk*(repo: GitRepository;
@@ -1371,13 +1410,13 @@ proc newPathSpec*(spec: openArray[string]): GitResult[GitPathSpec] =
   withGit:
     var
       ps: GitPathSpec
-      list: git_strarray
-    list.count = len(spec).cuint
-    list.strings = cast[ptr cstring](allocCStringArray(spec))
-    withResultOf git_pathspec_new(addr ps, addr list):
-      assert ps != nil
-      result.ok ps
-    deallocCStringArray(cast[cstringArray](list.strings))
+      list = spec.toStrArray()
+    try:
+      withResultOf git_pathspec_new(addr ps, addr list):
+        assert not ps.isNil
+        result.ok ps
+    finally:
+      free list
 
 proc matchWithParent(commit: GitCommit; nth: cuint;
                      options: ptr git_diff_options): GitResultCode =
@@ -1386,8 +1425,8 @@ proc matchWithParent(commit: GitCommit; nth: cuint;
   ##
   ## (this is adapted from a helper in libgit2's log.c example)
   ## https://github.com/libgit2/libgit2/blob/master/examples/log.c
-  assert commit != nil
-  assert options != nil
+  assert not commit.isNil
+  assert not options.isNil
   block:
     var
       repo = git_commit_owner(commit)
@@ -1395,7 +1434,7 @@ proc matchWithParent(commit: GitCommit; nth: cuint;
       pt, ct: GitTree
       diff: GitDiff
 
-    assert repo != nil
+    assert not repo.isNil
 
     # get the nth parent
     result = git_commit_parent(addr parent, commit, nth).grc
@@ -1422,8 +1461,8 @@ proc matchWithParent(commit: GitCommit; nth: cuint;
 
 proc allParentsMatch(commit: GitCommit; options: ptr git_diff_options;
                      parents: cuint): GitResult[bool] =
-  assert commit != nil
-  assert options != nil
+  assert not commit.isNil
+  assert not options.isNil
   # count matching parents
   block complete:
     for nth in 0 ..< parents:
@@ -1471,9 +1510,9 @@ proc zeroParentsMatch(commit: GitCommit; ps: GitPathSpec): GitResult[bool] =
 
 proc parentsMatch(commit: GitCommit; options: ptr git_diff_options;
                   ps: GitPathSpec): GitResult[bool] =
-  assert commit != nil
-  assert options != nil
-  assert ps != nil
+  assert not commit.isNil
+  assert not options.isNil
+  assert not ps.isNil
   let
     parents: cuint = git_commit_parentcount(commit)
   if parents == 0.cuint:
@@ -1484,7 +1523,7 @@ proc parentsMatch(commit: GitCommit; options: ptr git_diff_options;
 iterator commitsForSpec*(repo: GitRepository;
                          spec: openArray[string]): GitResult[GitThing] =
   ## yield each commit that matches the provided pathspec
-  assert repo != nil
+  assert not repo.isNil
   withGit:
     var
       options = cast[ptr git_diff_options](sizeof(git_diff_options).alloc)
@@ -1498,11 +1537,9 @@ iterator commitsForSpec*(repo: GitRepository;
         yield err[GitThing](code)
         break steve
 
-      options.pathspec.count = len(spec).cuint
-      options.pathspec.strings = cast[ptr cstring](allocCStringArray(spec))
-      # we'll free the strings array later
+      options.pathspec = spec.toStrArray().git_strarray
       defer:
-        deallocCStringArray(cast[cstringArray](options.pathspec.strings))
+        free options.pathspec.GittyStrArray
 
       # setup a pathspec for matching against trees, and free it later
       ps := newPathSpec(spec):
@@ -1550,8 +1587,9 @@ iterator commitsForSpec*(repo: GitRepository;
 proc tagCreateLightweight*(repo: GitRepository; target: GitThing;
                            name: string; force = false): GitResult[GitOid] =
   ## create a new lightweight tag in the repository
-  assert repo != nil
-  assert target != nil and target.o != nil
+  assert not repo.isNil
+  assert not target.isNil
+  assert not target.o.isNil
   withGit:
     block:
       let
@@ -1559,7 +1597,7 @@ proc tagCreateLightweight*(repo: GitRepository; target: GitThing;
       var
         oid: GitOid = cast[GitOid](sizeof(git_oid).alloc)
       withResultOf git_tag_create_lightweight(oid, repo, name, target.o, forced):
-        assert oid != nil
+        assert not oid.isNil
         result.ok oid
         break
       # free the oid if we didn't end up using it
@@ -1576,19 +1614,19 @@ proc branchUpstream*(branch: GitReference): GitResult[GitReference] =
     var
       upstream: GitReference
     withResultOf git_branch_upstream(addr upstream, branch):
-      assert upstream != nil
+      assert not upstream.isNil
       result.ok upstream
 
 proc setBranchUpstream*(branch: GitReference; name: string): GitResultCode =
   ## set the upstream for the branch to the given branch name
-  assert branch != nil
+  assert not branch.isNil
   withGit:
     result = git_branch_set_upstream(branch, name).grc
 
 proc branchRemoteName*(repo: GitRepository;
                        branch: string): GitResult[string] =
   ## try to fetch a single remote for a remote tracking branch
-  assert repo != nil
+  assert not repo.isNil
   withGit:
     var
       buff: git_buf
@@ -1605,7 +1643,7 @@ iterator branches*(repo: GitRepository;
                             GIT_BRANCH_REMOTE}): GitResult[GitReference] =
   ## this time, you're just gonna have to guess at what this proc might do...
   ## (also, you're just gonna have to free your references...)
-  assert repo != nil
+  assert not repo.isNil
   let flags =
     if GIT_BRANCH_ALL in flags:
       {GIT_BRANCH_LOCAL, GIT_BRANCH_REMOTE}
@@ -1651,16 +1689,16 @@ iterator branches*(repo: GitRepository;
 
         case code:
         of GIT_OK:
-          assert branch != nil
+          assert not branch.isNil
           # issue a branch result
           #yield ok(branch)
           yield Result[GitReference, GitResultCode].ok branch
         of GIT_ITEROVER:
-          assert branch == nil
+          assert branch.isNil
           # or end iteration normally
           break iteration
         else:
-          assert branch == nil
+          assert branch.isNil
           # or end iteration with an error emission
           #yield err[GitReference](code)
           yield Result[GitReference, GitResultCode].err code
@@ -1683,7 +1721,7 @@ proc newSignature*(name, email: string; time: Time): GitResult[GitSignature] =
       signature: GitSignature
     withResultOf git_signature_new(addr signature, name, email,
                                    time.toUnix.git_time_t, 0.cint):
-      assert signature != nil
+      assert not signature.isNil
       result.ok signature
 
 proc defaultSignature*(repo: GitRepository): GitResult[GitSignature] =
@@ -1692,16 +1730,16 @@ proc defaultSignature*(repo: GitRepository): GitResult[GitSignature] =
     var
       signature: GitSignature
     withResultOf git_signature_default(addr signature, repo):
-      assert signature != nil
+      assert not signature.isNil
       result.ok signature
 
 proc defaultSignature*(repo: GitRepository; time: Time): GitResult[GitSignature] =
   ## create a new signature using git configuration; must be freed
-  assert repo != nil
+  assert not repo.isNil
   let default = repo.defaultSignature
   if default.isOk:
-    template sig: GitSignature = default.get
-    assert sig != nil
+    template sig: GitSignature = get default
+    assert not sig.isNil
     try:
       result = newSignature($sig.name, $sig.email, time)
     finally:
@@ -1711,9 +1749,10 @@ proc tagCreate*(repo: GitRepository; target: GitThing; name: string;
                 tagger: GitSignature;
                 message = ""; force = false): GitResult[GitOid] =
   ## create a new tag in the repository with signature, message
-  assert repo != nil
-  assert target != nil and target.o != nil
-  assert tagger != nil
+  assert not repo.isNil
+  assert not target.isNil
+  assert not target.o.isNil
+  assert not tagger.isNil
   withGit:
     block:
       let
@@ -1731,8 +1770,9 @@ proc tagCreate*(repo: GitRepository; target: GitThing; name: string;
 proc tagCreate*(repo: GitRepository; target: GitThing; name: string;
                 message = ""; force = false): GitResult[GitOid] =
   ## lightweight routine to create a heavyweight signed and dated tag
-  assert repo != nil
-  assert target != nil and target.o != nil
+  assert not repo.isNil
+  assert not target.isNil
+  assert not target.o.isNil
   withGit:
     let
       tagger = target.committer  # the committer, as opposed to the author
@@ -1742,7 +1782,8 @@ proc tagCreate*(repo: GitRepository; target: GitThing; name: string;
 proc tagCreate*(target: GitThing; name: string;
                 message = ""; force = false): GitResult[GitOid] =
   ## lightweight routine to create a heavyweight signed and dated tag
-  assert target != nil and target.o != nil
+  assert not target.isNil
+  assert not target.o.isNil
   withGit:
     let
       repo = target.owner        # ie. the repository that owns the target
@@ -1752,7 +1793,7 @@ proc tagCreate*(target: GitThing; name: string;
 
 proc tagDelete*(repo: GitRepository; name: string): GitResultCode =
   ## remove a tag
-  assert repo != nil
+  assert not repo.isNil
   withGit:
     result = git_tag_delete(repo, name).grc
 
