@@ -1,4 +1,4 @@
-version = "3.2.0"
+version = "3.2.1"
 author = "disruptek"
 description = "higher-level libgit2 bindings"
 license = "MIT"
