@@ -686,10 +686,10 @@ proc branchName*(got: GitReference): string =
     # size so we can branc_name into it safely...
     var
       name = git_reference_name(got)
-    block:
+    block complete:
       gitTrap git_branch_name(addr name, got).grc:
         dumpError()
-        break
+        break complete
       result = $name
 
 proc isBranch*(got: GitReference): bool =
@@ -1054,12 +1054,12 @@ proc addTag(tags: var GitTagTable; name: string;
 
 proc tagTable*(repo: GitRepository): GitResult[GitTagTable] =
   ## compose a table of tags and their associated references
-  block:
+  block complete:
     let names = repo.tagList
     # if we cannot fetch a tag list,
     if names.isErr:
       result.err names.error
-      break
+      break complete
 
     # now we know we'll be returning a table, at least
     var
@@ -1096,11 +1096,11 @@ proc shortestTag*(table: GitTagTable; oid: string): string =
 proc getHeadOid*(repo: GitRepository): GitResult[GitOid] =
   ## try to retrieve the #head oid from a repository
   withGit:
-    block:
+    block complete:
       # free the head after we're done with it
       head := repo.headReference:
         result.err code
-        break
+        break complete
       # return a copy of the oid so we can free the head
       result = head.oid.copy
 
@@ -1117,14 +1117,14 @@ iterator status*(repository: GitRepository; show: GitStatusShow;
       options = cast[ptr git_status_options](sizeof(git_status_options).alloc)
     try:
 
-      block:
+      block complete:
         var
           code = git_status_options_init(options,
                                         GIT_STATUS_OPTIONS_VERSION).grc
         if code != GIT_OK:
           # throw the error code
           yield Result[GitStatus, GitResultCode].err(code)
-          break
+          break complete
 
         # add the options specified by the user
         options.show = show.to_c_git_status_show_t
@@ -1138,7 +1138,7 @@ iterator status*(repository: GitRepository; show: GitStatusShow;
         if code != GIT_OK:
           # throw the error code
           yield Result[GitStatus, GitResultCode].err(code)
-          break
+          break complete
         try:
           # iterate over the status list by entry index
           for index in 0 ..< git_status_list_entrycount(statum):
@@ -1163,11 +1163,11 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
     defer:
       dealloc options
 
-    block:
+    block complete:
       # start with converting the thing to an annotated commit
       result = git_annotated_commit_lookup(addr target, repo, thing.oid).grc
       if result != GIT_OK:
-        break
+        break complete
       defer:
         free target
 
@@ -1175,7 +1175,7 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
       let oid = git_annotated_commit_id(target)
       result = git_commit_lookup(addr commit, repo, oid).grc
       if result != GIT_OK:
-        break
+        break complete
       defer:
         free commit
 
@@ -1183,7 +1183,7 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
       result = git_checkout_options_init(options,
                                          GIT_CHECKOUT_OPTIONS_VERSION).grc
       if result != GIT_OK:
-        break
+        break complete
 
       # reset the strategy per flags
       options.checkout_strategy = setFlags(strategy)
@@ -1196,7 +1196,7 @@ proc checkoutTree*(repo: GitRepository; thing: GitThing;
       # checkout the tree using the commit we fetched
       result = git_checkout_tree(repo, cast[GitObject](commit), options).grc
       if result != GIT_OK:
-        break
+        break complete
 
       # get the commit ref name
       let name = git_annotated_commit_ref(target)
@@ -1211,10 +1211,10 @@ proc checkoutTree*(repo: GitRepository; reference: string;
   ## checkout a repository using a reference string; supply paths to
   ## limit the checkout to, uh, those particular paths
   withGit:
-    block:
+    block complete:
       thing := repo.lookupThing(reference):
         setResultAsError(result, code)
-        break
+        break complete
       result = repo.checkoutTree(thing, paths = paths, strategy = strategy)
 
 proc checkoutHead*(repo: GitRepository;
@@ -1325,23 +1325,23 @@ proc newRevWalk*(repo: GitRepository): GitResult[GitRevWalker] =
 proc next*(walker: GitRevWalker): GitResult[GitOid] =
   ## try to get the next oid that we should walk to
   withGit:
-    block:
+    block complete:
       var
         oid: GitOid = cast[GitOid](sizeof(git_oid).alloc)
       withResultOf git_revwalk_next(oid, walker):
         assert not oid.isNil
         result.ok oid
-        break
+        break complete
       # free the oid if we couldn't use it
       free oid
 
 proc push*(walker: GitRevWalker; oid: GitOid): GitResultCode =
   ## add a starting oid for the walker to begin at
   withGit:
-    block:
+    block complete:
       pushee := copy(oid):
         setResultAsError(result, code)
-        break
+        break complete
       result = git_revwalk_push(walker, pushee).grc
 
 proc lookupCommit*(repo: GitRepository; oid: GitOid): GitResult[GitThing] =
@@ -1357,7 +1357,7 @@ iterator revWalk*(repo: GitRepository;
                   walker: GitRevWalker): GitResult[GitThing] =
   ## sic the walker on a repo starting with the given oid
   withGit:
-    block:
+    block complete:
       var
         future = walker.next
         oid: GitOid
@@ -1367,7 +1367,7 @@ iterator revWalk*(repo: GitRepository;
       if future.isErr:
         if future.error != GIT_ENOTFOUND:
           yield err[GitThing](future.error)
-        break
+        break complete
 
       try:
         while future.isOk:
@@ -1427,7 +1427,7 @@ proc matchWithParent(commit: GitCommit; nth: cuint;
   ## https://github.com/libgit2/libgit2/blob/master/examples/log.c
   assert not commit.isNil
   assert not options.isNil
-  block:
+  block complete:
     var
       repo = git_commit_owner(commit)
       parent: ptr git_commit
@@ -1439,22 +1439,22 @@ proc matchWithParent(commit: GitCommit; nth: cuint;
     # get the nth parent
     result = git_commit_parent(addr parent, commit, nth).grc
     gitTrap parent, result:
-      break
+      break complete
 
     # grab the parent's tree
     result = git_commit_tree(addr pt, parent).grc
     gitTrap pt, result:
-      break
+      break complete
 
     # grab the commit's tree
     result = git_commit_tree(addr ct, commit).grc
     gitTrap ct, result:
-      break
+      break complete
 
     # take a diff the the two trees
     result = git_diff_tree_to_tree(addr diff, repo, pt, ct, options).grc
     gitTrap diff, result:
-      break
+      break complete
 
     if git_diff_num_deltas(diff).uint == 0'u:
       result = GIT_ENOTFOUND
@@ -1530,12 +1530,12 @@ iterator commitsForSpec*(repo: GitRepository;
     defer:
       dealloc options
 
-    block steve:
+    block complete:
       let
         code = git_diff_options_init(options, GIT_DIFF_OPTIONS_VERSION).grc
       if code != GIT_OK:
         yield err[GitThing](code)
-        break steve
+        break complete
 
       options.pathspec = spec.toStrArray().git_strarray
       defer:
@@ -1544,21 +1544,21 @@ iterator commitsForSpec*(repo: GitRepository;
       # setup a pathspec for matching against trees, and free it later
       ps := newPathSpec(spec):
         yield err[GitThing](code)
-        break steve
+        break complete
 
       # we'll need a walker, and we'll want it freed
       walker := repo.newRevWalk:
         yield err[GitThing](code)
-        break steve
+        break complete
 
       # find the head
       head := repo.getHeadOid:
         # no head, no problem
-        break steve
+        break complete
 
       # start at the head
       gitTrap walker.push(head):
-        break steve
+        break complete
 
       # iterate over ALL the commits
       # pass a copy of the head oid so revwalk can free it
@@ -1567,7 +1567,7 @@ iterator commitsForSpec*(repo: GitRepository;
         if rev.isErr:
           #yield ok[GitThing](rev.get)
           yield Result[GitThing, GitResultCode].ok rev.get
-          break steve
+          break complete
         else:
           let
             matched = rev.get.commit.parentsMatch(options, ps)
@@ -1582,7 +1582,7 @@ iterator commitsForSpec*(repo: GitRepository;
               # the matching process produced an error
               #yield err[GitThing](matched.error)
               yield Result[GitThing, GitResultCode].err matched.error
-              break steve
+              break complete
 
 proc tagCreateLightweight*(repo: GitRepository; target: GitThing;
                            name: string; force = false): GitResult[GitOid] =
@@ -1591,7 +1591,7 @@ proc tagCreateLightweight*(repo: GitRepository; target: GitThing;
   assert not target.isNil
   assert not target.o.isNil
   withGit:
-    block:
+    block complete:
       let
         forced: cint = if force: 1 else: 0
       var
@@ -1599,7 +1599,7 @@ proc tagCreateLightweight*(repo: GitRepository; target: GitThing;
       withResultOf git_tag_create_lightweight(oid, repo, name, target.o, forced):
         assert not oid.isNil
         result.ok oid
-        break
+        break complete
       # free the oid if we didn't end up using it
       free oid
 
@@ -1665,7 +1665,7 @@ iterator branches*(repo: GitRepository;
           GIT_BRANCH_ALL
 
     # follow close 'cause it's about to get weird
-    block iteration:
+    block complete:
       var
         iter: ptr git_branch_iterator
         # create an iterator
@@ -1676,7 +1676,7 @@ iterator branches*(repo: GitRepository;
         # then emit the error and bail
         #yield err[GitReference](code)
         yield Result[GitReference, GitResultCode].err code
-        break iteration
+        break complete
       defer:
         iter.free
 
@@ -1696,13 +1696,13 @@ iterator branches*(repo: GitRepository;
         of GIT_ITEROVER:
           assert branch.isNil
           # or end iteration normally
-          break iteration
+          break complete
         else:
           assert branch.isNil
           # or end iteration with an error emission
           #yield err[GitReference](code)
           yield Result[GitReference, GitResultCode].err code
-          break iteration
+          break complete
     # now, look, i tol' you it was gonna get weird; it's
     # your own fault you weren't paying attention
 
@@ -1754,7 +1754,7 @@ proc tagCreate*(repo: GitRepository; target: GitThing; name: string;
   assert not target.o.isNil
   assert not tagger.isNil
   withGit:
-    block:
+    block complete:
       let
         forced: cint = if force: 1 else: 0
       var
@@ -1763,7 +1763,7 @@ proc tagCreate*(repo: GitRepository; target: GitThing; name: string;
                                   tagger, message, forced):
         assert git_oid_is_zero(oid) == 0
         result.ok oid
-        break
+        break complete
       # free the oid if we didn't end up using it
       free oid
 
