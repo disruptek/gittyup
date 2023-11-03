@@ -13,7 +13,7 @@ the underlying libgit2 and libssh2 libraries in the environment.
 
 ## Usage
 
-We test with `libgit2-1.3.0` though earlier versions may work.
+We test with `libgit2-1.7.1` though earlier versions may work.
 
 This gives some idea for the usage:
 
