@@ -83,9 +83,9 @@ jobs:
           cd ../..
           nimble -y develop
           if [ "${{ matrix.os }}" == "macos-latest" ]; then
-            balls --backend:c --backend:cpp --mm:arc --mm:orc -d:libgit2Lib="$(pwd)/libgit2/build/libgit2.dylib" --passc:"-I$(pwd)/libgit2/include"
+            balls --path="." --backend:c --backend:cpp --mm:arc --mm:orc -d:libgit2Lib="$(pwd)/libgit2/build/libgit2.dylib" --passc:"-I$(pwd)/libgit2/include"
           else
-            balls --backend:c --backend:cpp --mm:arc --mm:orc -d:libgit2Lib="$(pwd)/libgit2/build/libgit2.so" --passc:"-I$(pwd)/libgit2/include"
+            balls --path="." --backend:c --backend:cpp --mm:arc --mm:orc -d:libgit2Lib="$(pwd)/libgit2/build/libgit2.so" --passc:"-I$(pwd)/libgit2/include"
           fi
 
       - name: Build docs
