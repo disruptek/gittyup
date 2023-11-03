@@ -49,6 +49,7 @@ jobs:
           cd ci
           git fetch --unshallow
           nimble --accept develop
+          nimble --accept install "https://github.com/disruptek/balls"
           git clone --depth 1 --branch v1.3.0 https://github.com/libgit2/libgit2.git
           cd libgit2
           mkdir build
@@ -58,11 +59,9 @@ jobs:
           cd ../..
           nimble -y develop
           if [ "${{ matrix.os }}" == "macos-latest" ]; then
-            balls -d:libgit2Lib="$(pwd)/libgit2/build/libgit2.dylib" --passc:"-I$(pwd)/libgit2/include"
-
+            balls --backend:c --backend:cpp --mm:arc --mm:orc -d:libgit2Lib="$(pwd)/libgit2/build/libgit2.dylib" --passc:"-I$(pwd)/libgit2/include"
           else
-            balls -d:libgit2Lib="$(pwd)/libgit2/build/libgit2.so" --passc:"-I$(pwd)/libgit2/include"
-
+            balls --backend:c --backend:cpp --mm:arc --mm:orc -d:libgit2Lib="$(pwd)/libgit2/build/libgit2.so" --passc:"-I$(pwd)/libgit2/include"
           fi
 
       - name: Build docs
