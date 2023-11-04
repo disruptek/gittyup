@@ -1381,16 +1381,8 @@ iterator revWalk*(repo: GitRepository;
             # and then break iteration
             break
 
-          # a successful lookup; yield a new thing using the commit
-          block duping:
-            # copy the commit so a consumer can do their own mm on it
-            var
-              dupe = copy(commit)
-            if dupe.isErr:
-              yield err[GitThing](dupe.error)
-              break duping
-            else:
-              yield Result[GitThing, GitResultCode].ok(dupe.get)
+          # a successful lookup; yield the commit
+          yield Result[GitThing, GitResultCode].ok(commit)
 
           # fetch the next step in the walk
           future = walker.next
