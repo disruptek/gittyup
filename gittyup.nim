@@ -1428,27 +1428,35 @@ proc matchWithParent(commit: GitCommit; nth: cuint;
     assert not repo.isNil
 
     # get the nth parent
-    result = git_commit_parent(addr parent, commit, nth).grc
-    gitTrap parent, result:
+    let r1 = git_commit_parent(addr parent, commit, nth).grc
+    gitTrap parent, r1:
+      result = r1
       break complete
 
     # grab the parent's tree
-    result = git_commit_tree(addr pt, parent).grc
-    gitTrap pt, result:
+    let r2 = git_commit_tree(addr pt, parent).grc
+    gitTrap pt, r2:
+      result = r2
       break complete
 
     # grab the commit's tree
-    result = git_commit_tree(addr ct, commit).grc
-    gitTrap ct, result:
+    let r3 = git_commit_tree(addr ct, commit).grc
+    gitTrap ct, r3:
+      result = r3
       break complete
 
     # take a diff the the two trees
-    result = git_diff_tree_to_tree(addr diff, repo, pt, ct, options).grc
-    gitTrap diff, result:
+    let r4 = git_diff_tree_to_tree(addr diff, repo, pt, ct, options).grc
+    gitTrap diff, r4:
+      result = r4
       break complete
 
-    if git_diff_num_deltas(diff).uint == 0'u:
-      result = GIT_ENOTFOUND
+    result =
+      case git_diff_num_deltas(diff).uint
+      of 0'u:
+        GIT_ENOTFOUND
+      else:
+        GIT_OK
 
 proc allParentsMatch(commit: GitCommit; options: ptr git_diff_options;
                      parents: cuint): GitResult[bool] =
@@ -1462,14 +1470,15 @@ proc allParentsMatch(commit: GitCommit; options: ptr git_diff_options;
       case code:
       of GIT_OK:
         # this feels like a match; keep going
-        continue
+        discard
       of GIT_ENOTFOUND:
         # this is fine, but it's not a match
         result.ok false
+        break complete
       else:
         # this is probably not that fine; error on it
         result.err code
-      break complete
+        break complete
     # everything matched
     result.ok true
 
