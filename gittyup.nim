@@ -1372,17 +1372,20 @@ iterator revWalk*(repo: GitRepository;
         while future.isOk:
           # the future holds the next step in the walk
           oid = future.get
+          defer:
+            free oid
 
           # lookup the next commit using the current oid
-          commit := repo.lookupCommit(oid):
-            if code != GIT_ENOTFOUND:
+          var commit = repo.lookupCommit(oid)
+          if commit.isErr:
+            if commit.error != GIT_ENOTFOUND:
               # undefined error; emit it as such
-              yield err[GitThing](code)
+              yield err[GitThing](commit.error)
             # and then break iteration
             break
 
           # a successful lookup; yield the commit
-          yield Result[GitThing, GitResultCode].ok(commit)
+          yield Result[GitThing, GitResultCode].ok(newThing commit.get)
 
           # fetch the next step in the walk
           future = walker.next
@@ -1577,7 +1580,7 @@ iterator commitsForSpec*(repo: GitRepository;
             yield Result[GitThing, GitResultCode].ok rev.get
           else:
             # we're not going to emit this revision, so free it
-            #free rev.get
+            free rev.get
             if matched.isErr:
               # the matching process produced an error
               #yield err[GitThing](matched.error)
