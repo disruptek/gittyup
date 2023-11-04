@@ -137,8 +137,7 @@ suite "giddy up, pardner":
     # perform the walk
     for rev in cloned.revWalk(walker):
       check rev.isOk
-      #echo rev.get
-      #free rev.get
+      free rev.get
 
   ## commits for spec
   test:
