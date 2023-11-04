@@ -1368,36 +1368,31 @@ iterator revWalk*(repo: GitRepository;
           yield err[GitThing](future.error)
         break complete
 
-      try:
-        while future.isOk:
-          # the future holds the next step in the walk
-          oid = future.get
-          defer:
-            free oid
+      while future.isOk:
+        # the future holds the next step in the walk
+        oid = future.get
+        defer:
+          free oid
 
-          # lookup the next commit using the current oid
-          var commit = repo.lookupCommit(oid)
-          if commit.isErr:
-            if commit.error != GIT_ENOTFOUND:
-              # undefined error; emit it as such
-              yield err[GitThing](commit.error)
-            # and then break iteration
-            break
+        # lookup the next commit using the current oid
+        var commit = repo.lookupCommit(oid)
+        if commit.isErr:
+          if commit.error != GIT_ENOTFOUND:
+            # undefined error; emit it as such
+            yield err[GitThing](commit.error)
+          # and then break iteration
+          break
 
-          # a successful lookup; yield the commit
-          yield Result[GitThing, GitResultCode].ok(newThing commit.get)
+        # a successful lookup; yield the commit
+        yield Result[GitThing, GitResultCode].ok(newThing commit.get)
 
-          # fetch the next step in the walk
-          future = walker.next
-          if future.isErr:
-            # if we didn't reach the end of iteration,
-            if future.error notin {GIT_ITEROVER, GIT_ENOTFOUND}:
-              # emit the error
-              yield err[GitThing](future.error)
-
-      finally:
-        # finally free oid
-        free oid
+        # fetch the next step in the walk
+        future = walker.next
+        if future.isErr:
+          # if we didn't reach the end of iteration,
+          if future.error notin {GIT_ITEROVER, GIT_ENOTFOUND}:
+            # emit the error
+            yield err[GitThing](future.error)
 
 proc newPathSpec*(spec: openArray[string]): GitResult[GitPathSpec] =
   ## instantiate a new path spec from a strarray
