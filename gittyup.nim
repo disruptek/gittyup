@@ -1029,14 +1029,14 @@ proc newTagTable*(size = 32): GitTagTable =
   result = newOrderedTable[string, GitThing](size)
 
 proc addTag(tags: var GitTagTable; name: string;
-            thing: var GitThing): GitResultCode =
+            thing: sink GitThing): GitResultCode =
   assert not thing.isNil
   assert not thing.o.isNil
   ## add a thing to the tag table, perhaps peeling it first
   # if it's not a tag, just add it to the table and move on
   if thing.kind != GIT_OBJECT_TAG:
     # no need to peel this thing
-    tags[name] = thing
+    tags[name] = move thing
     result = GIT_OK
   else:
     # it's a tag, so attempt to dereference it
@@ -1047,10 +1047,10 @@ proc addTag(tags: var GitTagTable; name: string;
       result = target.error
     else:
       # add the thing's target to the table under the current name
-      tags[name] = get target
+      tags[name] = move target.get
       result = GIT_OK
-      # free the target; we don't need it anymore
-      free get(target)
+    # free the tag
+    free thing
 
 proc tagTable*(repo: GitRepository): GitResult[GitTagTable] =
   ## compose a table of tags and their associated references
@@ -1067,17 +1067,16 @@ proc tagTable*(repo: GitRepository): GitResult[GitTagTable] =
 
     # iterate over all the names,
     for name in names.get.items:
-      var
-        # try to lookup the name
-        thing = repo.lookupThing(name)
+      # try to lookup the name
+      var thing = repo.lookupThing(name)
       if thing.isErr:
         # if that failed, just continue to the next name versus error'ing
         debug &"failed lookup for `{name}`: {thing.error}"
-      else:
-        # peel and add the thing to the tag table
-        let code = tags.addTag(name, thing.get)
-        if code != GIT_OK:
-          debug &"failed peel for `{name}`: {code}"
+        continue
+      # peel and add the thing to the tag table
+      let code = tags.addTag(name, move thing.get)
+      if code != GIT_OK:
+        debug &"failed peel for `{name}`: {code}"
 
     # don't forget to actually populate the result, i mean, who would be
     # so stupid as to not actually return the result?  and then cut a new
