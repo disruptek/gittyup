@@ -267,6 +267,8 @@ proc loadCerts(): bool =
     if (file, dir) == ("", ""):
       file = "/etc/ssl/certs/ca-certificates.crt"
     if not fileExists(file):
+      when defined(debugGit):
+        debug "skipped loading certs"
       return true
   # this seems to be helpful for git builds on linux, at least
   if file != "" and dir == "":
@@ -278,44 +280,32 @@ proc loadCerts(): bool =
   if not result:
     dumpError()
 
-proc initGit(): bool =
-  let code = git_libgit2_init()
-  result = code > 0
-  when defined(debugGit):
-    debug "git init"
-  when not defined(windows):
-    result = result and loadCerts()
-
-proc init*(): bool =
+proc init*(): int =
   ## initialize the library to prepare for git operations;
-  ## returns true if libgit2 was initialized
-  when defined(gitShutsDown):
-    return initGit()
+  ## returns the number of outstanding initializations.
+  result = git_libgit2_init()
+  if result <= 0:
+    raise newException(OSError, "unable to init git")
   else:
-    block:
-      once:
-        return initGit()
-
-      result = true
-
-proc shutdown*(): bool =
-  ## shutdown the library, freeing any libgit2 data;
-  ## returns true if shutdown was successful
-  when defined(gitShutsDown):
-    result = git_libgit2_shutdown() >= 0
     when defined(debugGit):
-      debug "git shut"
-  else:
-    result = true
+      debug "git init"
+  when not defined(windows):
+    # let it at least try to work if certs are not found
+    discard loadCerts()
+
+proc shutdown*(): int =
+  ## decrement the initialization counter.  when the counter is zero,
+  ## no outstanding resources are allocated by the underlying libgit2.
+  result = git_libgit2_shutdown()
+  when defined(debugGit):
+    debug "git shut"
 
 template withGit(body: untyped) =
   ## convenience to ensure git is initialized and shutdown
-  if not init():
-    raise newException(OSError, "unable to init git")
-  defer:
-    if not shutdown():
-      raise newException(OSError, "unable to shut git")
-  body
+  if init() > 0:
+    defer:
+      discard shutdown()
+    body
 
 template setResultAsError(result: typed; code: cint | GitResultCode) =
   ## given a git result code, assign it to the result to indicate error;
