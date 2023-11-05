@@ -84,10 +84,10 @@ jobs:
           cmake --build . -- --quiet
           cd ../..
           nimble -y develop
-          if [ "${{ matrix.os }}" == "macos-latest" ]; then
-            balls --path="." --backend:c --backend:cpp --mm:arc --mm:orc -d:libgit2Lib="$(pwd)/libgit2/build/libgit2.dylib" --passc:"-I$(pwd)/libgit2/include"
+          if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+            balls --path="." --define:useMalloc --backend:c --mm:arc -d:libgit2Lib="$(pwd)/libgit2/build/libgit2.dylib" --passc:"-I$(pwd)/libgit2/include"
           else
-            balls --path="." --backend:c --backend:cpp --mm:arc --mm:orc -d:libgit2Lib="$(pwd)/libgit2/build/libgit2.so" --passc:"-I$(pwd)/libgit2/include"
+            balls --path="." --define:useMalloc --backend:c --mm:arc -d:libgit2Lib="$(pwd)/libgit2/build/libgit2.so" --passc:"-I$(pwd)/libgit2/include"
           fi
 
       - name: Build docs
