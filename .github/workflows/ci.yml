@@ -71,7 +71,7 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update
-          sudo apt install --fix-missing valgrind
+          #sudo apt install --fix-missing valgrind
           cd project
           git fetch --unshallow
           nimble --accept develop
