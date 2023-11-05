@@ -254,28 +254,18 @@ proc normalizeUrl(uri: Uri): Uri =
     result.scheme = "ssh"
 
 proc loadCerts(): bool =
+  ## true if we informed libgit2 of the system certs (posix only)
   # https://github.com/wildart/julia/commit/2a59c5fcb579c76715f0015784b6a0a8ebda0c0c
-  var
-    file = getEnv("SSL_CERT_FILE")
-    dir = getEnv("SSL_CERT_DIR")
-  if not fileExists(file):
-    file = ""
-  if not dirExists(dir):
-    dir = ""
-  # try to set a default for linux
-  when defined(posix):
-    if (file, dir) == ("", ""):
-      file = "/etc/ssl/certs/ca-certificates.crt"
-    if not fileExists(file):
-      when defined(debugGit):
-        debug "skipped loading certs"
-      return true
-  # this seems to be helpful for git builds on linux, at least
-  if file != "" and dir == "":
-    dir = parentDir file
-  result = git_libgit2_opts(
-             GIT_OPT_SET_SSL_CERT_LOCATIONS.cint,
-             file.cstring, dir.cstring) >= 0
+  when not defined(posix): return false
+  var file = getEnv("SSL_CERT_FILE", "/etc/ssl/certs/ca-certificates.crt")
+  var dir = getEnv("SSL_CERT_DIR", "")
+  if dir == "" or not dir.dirExists:
+    if file == "" or not file.fileExists:
+      return false
+    else:
+      dir = parentDir file
+  result = 0 <= git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS.cint,
+                                 file.cstring, dir.cstring)
   # this is a little heavy-handed, but it might save someone some time
   if not result:
     dumpError()
@@ -289,9 +279,8 @@ proc init*(): int =
   else:
     when defined(debugGit):
       debug "git init"
-  when not defined(windows):
-    # let it at least try to work if certs are not found
-    discard loadCerts()
+  # let it at least try to work if certs are not found
+  discard loadCerts()
 
 proc shutdown*(): int =
   ## decrement the initialization counter.  when the counter is zero,
