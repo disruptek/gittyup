@@ -1029,14 +1029,14 @@ proc newTagTable*(size = 32): GitTagTable =
   result = newOrderedTable[string, GitThing](size)
 
 proc addTag(tags: var GitTagTable; name: string;
-            thing: var GitThing): GitResultCode =
+            thing: sink GitThing): GitResultCode =
   assert not thing.isNil
   assert not thing.o.isNil
   ## add a thing to the tag table, perhaps peeling it first
   # if it's not a tag, just add it to the table and move on
   if thing.kind != GIT_OBJECT_TAG:
     # no need to peel this thing
-    tags[name] = thing
+    tags[name] = move thing
     result = GIT_OK
   else:
     # it's a tag, so attempt to dereference it
@@ -1047,10 +1047,10 @@ proc addTag(tags: var GitTagTable; name: string;
       result = target.error
     else:
       # add the thing's target to the table under the current name
-      tags[name] = get target
+      tags[name] = move target.get
       result = GIT_OK
-      # free the target; we don't need it anymore
-      free get(target)
+    # free the tag
+    free thing
 
 proc tagTable*(repo: GitRepository): GitResult[GitTagTable] =
   ## compose a table of tags and their associated references
@@ -1067,17 +1067,16 @@ proc tagTable*(repo: GitRepository): GitResult[GitTagTable] =
 
     # iterate over all the names,
     for name in names.get.items:
-      var
-        # try to lookup the name
-        thing = repo.lookupThing(name)
+      # try to lookup the name
+      var thing = repo.lookupThing(name)
       if thing.isErr:
         # if that failed, just continue to the next name versus error'ing
         debug &"failed lookup for `{name}`: {thing.error}"
-      else:
-        # peel and add the thing to the tag table
-        let code = tags.addTag(name, thing.get)
-        if code != GIT_OK:
-          debug &"failed peel for `{name}`: {code}"
+        continue
+      # peel and add the thing to the tag table
+      let code = tags.addTag(name, move thing.get)
+      if code != GIT_OK:
+        debug &"failed peel for `{name}`: {code}"
 
     # don't forget to actually populate the result, i mean, who would be
     # so stupid as to not actually return the result?  and then cut a new
@@ -1369,41 +1368,31 @@ iterator revWalk*(repo: GitRepository;
           yield err[GitThing](future.error)
         break complete
 
-      try:
-        while future.isOk:
-          # the future holds the next step in the walk
-          oid = future.get
+      while future.isOk:
+        # the future holds the next step in the walk
+        oid = future.get
+        defer:
+          free oid
 
-          # lookup the next commit using the current oid
-          commit := repo.lookupCommit(oid):
-            if code != GIT_ENOTFOUND:
-              # undefined error; emit it as such
-              yield err[GitThing](code)
-            # and then break iteration
-            break
+        # lookup the next commit using the current oid
+        var commit = repo.lookupCommit(oid)
+        if commit.isErr:
+          if commit.error != GIT_ENOTFOUND:
+            # undefined error; emit it as such
+            yield err[GitThing](commit.error)
+          # and then break iteration
+          break
 
-          # a successful lookup; yield a new thing using the commit
-          block duping:
-            # copy the commit so a consumer can do their own mm on it
-            var
-              dupe = copy(commit)
-            if dupe.isErr:
-              yield err[GitThing](dupe.error)
-              break duping
-            else:
-              yield Result[GitThing, GitResultCode].ok(dupe.get)
+        # a successful lookup; yield the commit
+        yield Result[GitThing, GitResultCode].ok(newThing commit.get)
 
-          # fetch the next step in the walk
-          future = walker.next
-          if future.isErr:
-            # if we didn't reach the end of iteration,
-            if future.error notin {GIT_ITEROVER, GIT_ENOTFOUND}:
-              # emit the error
-              yield err[GitThing](future.error)
-
-      finally:
-        # finally free oid
-        free oid
+        # fetch the next step in the walk
+        future = walker.next
+        if future.isErr:
+          # if we didn't reach the end of iteration,
+          if future.error notin {GIT_ITEROVER, GIT_ENOTFOUND}:
+            # emit the error
+            yield err[GitThing](future.error)
 
 proc newPathSpec*(spec: openArray[string]): GitResult[GitPathSpec] =
   ## instantiate a new path spec from a strarray
@@ -1437,27 +1426,35 @@ proc matchWithParent(commit: GitCommit; nth: cuint;
     assert not repo.isNil
 
     # get the nth parent
-    result = git_commit_parent(addr parent, commit, nth).grc
-    gitTrap parent, result:
+    let r1 = git_commit_parent(addr parent, commit, nth).grc
+    gitTrap parent, r1:
+      result = r1
       break complete
 
     # grab the parent's tree
-    result = git_commit_tree(addr pt, parent).grc
-    gitTrap pt, result:
+    let r2 = git_commit_tree(addr pt, parent).grc
+    gitTrap pt, r2:
+      result = r2
       break complete
 
     # grab the commit's tree
-    result = git_commit_tree(addr ct, commit).grc
-    gitTrap ct, result:
+    let r3 = git_commit_tree(addr ct, commit).grc
+    gitTrap ct, r3:
+      result = r3
       break complete
 
     # take a diff the the two trees
-    result = git_diff_tree_to_tree(addr diff, repo, pt, ct, options).grc
-    gitTrap diff, result:
+    let r4 = git_diff_tree_to_tree(addr diff, repo, pt, ct, options).grc
+    gitTrap diff, r4:
+      result = r4
       break complete
 
-    if git_diff_num_deltas(diff).uint == 0'u:
-      result = GIT_ENOTFOUND
+    result =
+      case git_diff_num_deltas(diff).uint
+      of 0'u:
+        GIT_ENOTFOUND
+      else:
+        GIT_OK
 
 proc allParentsMatch(commit: GitCommit; options: ptr git_diff_options;
                      parents: cuint): GitResult[bool] =
@@ -1471,14 +1468,15 @@ proc allParentsMatch(commit: GitCommit; options: ptr git_diff_options;
       case code:
       of GIT_OK:
         # this feels like a match; keep going
-        continue
+        discard
       of GIT_ENOTFOUND:
         # this is fine, but it's not a match
         result.ok false
+        break complete
       else:
         # this is probably not that fine; error on it
         result.err code
-      break complete
+        break complete
     # everything matched
     result.ok true
 
@@ -1577,7 +1575,7 @@ iterator commitsForSpec*(repo: GitRepository;
             yield Result[GitThing, GitResultCode].ok rev.get
           else:
             # we're not going to emit this revision, so free it
-            #free rev.get
+            free rev.get
             if matched.isErr:
               # the matching process produced an error
               #yield err[GitThing](matched.error)

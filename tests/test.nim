@@ -137,8 +137,7 @@ suite "giddy up, pardner":
     # perform the walk
     for rev in cloned.revWalk(walker):
       check rev.isOk
-      #echo rev.get
-      #free rev.get
+      free rev.get
 
   ## commits for spec
   test:
@@ -147,8 +146,13 @@ suite "giddy up, pardner":
     check GIT_REPOSITORY_STATE_NONE == cloned.repositoryState
     let
       dotnimble = "gittyup.nim"
+
     var
       things: seq[GitThing] = @[]
+    defer:
+      while things.len > 0:
+        free things.pop
+
     proc dump(things: var seq[GitThing]): string =
       for n in things.items:
         if n != nil:
@@ -163,7 +167,6 @@ suite "giddy up, pardner":
       for thing in things.items:
         if $thing.oid == v102:
           break found
-        free thing
       fail "unable to find v102"
 
   ## fetchRemote
