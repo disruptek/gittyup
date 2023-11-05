@@ -71,6 +71,7 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update
+          # using compiler santizers for speed
           #sudo apt install --fix-missing valgrind
           cd project
           git fetch --unshallow
@@ -85,9 +86,9 @@ jobs:
           cd ../..
           nimble -y develop
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-            balls --path="." --define:useMalloc --backend:c --mm:arc -d:libgit2Lib="$(pwd)/libgit2/build/libgit2.so" --passc:"-I$(pwd)/libgit2/include"
+            balls --path="." --define:useMalloc --backend:c --backend:cpp --mm:orc --mm:arc -d:libgit2Lib="$(pwd)/libgit2/build/libgit2.so" --passc:"-I$(pwd)/libgit2/include"
           else
-            balls --path="." --define:useMalloc --backend:c --mm:arc -d:libgit2Lib="$(pwd)/libgit2/build/libgit2.dylib" --passc:"-I$(pwd)/libgit2/include"
+            balls --path="." --define:useMalloc --backend:c --backend:cpp --mm:orc --mm:arc -d:libgit2Lib="$(pwd)/libgit2/build/libgit2.dylib" --passc:"-I$(pwd)/libgit2/include"
           fi
 
       - name: Build docs
