@@ -254,68 +254,47 @@ proc normalizeUrl(uri: Uri): Uri =
     result.scheme = "ssh"
 
 proc loadCerts(): bool =
+  ## true if we informed libgit2 of the system certs (posix only)
   # https://github.com/wildart/julia/commit/2a59c5fcb579c76715f0015784b6a0a8ebda0c0c
-  var
-    file = getEnv("SSL_CERT_FILE")
-    dir = getEnv("SSL_CERT_DIR")
-  if not fileExists(file):
-    file = ""
-  if not dirExists(dir):
-    dir = ""
-  # try to set a default for linux
-  when defined(posix):
-    if (file, dir) == ("", ""):
-      file = "/etc/ssl/certs/ca-certificates.crt"
-    if not fileExists(file):
-      return true
-  # this seems to be helpful for git builds on linux, at least
-  if file != "" and dir == "":
-    dir = parentDir file
-  result = git_libgit2_opts(
-             GIT_OPT_SET_SSL_CERT_LOCATIONS.cint,
-             file.cstring, dir.cstring) >= 0
+  when not defined(posix): return false
+  var file = getEnv("SSL_CERT_FILE", "/etc/ssl/certs/ca-certificates.crt")
+  var dir = getEnv("SSL_CERT_DIR", "")
+  if dir == "" or not dir.dirExists:
+    if file == "" or not file.fileExists:
+      return false
+    else:
+      dir = parentDir file
+  result = 0 <= git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS.cint,
+                                 file.cstring, dir.cstring)
   # this is a little heavy-handed, but it might save someone some time
   if not result:
     dumpError()
 
-proc initGit(): bool =
-  let code = git_libgit2_init()
-  result = code > 0
-  when defined(debugGit):
-    debug "git init"
-  when not defined(windows):
-    result = result and loadCerts()
-
-proc init*(): bool =
+proc init*(): int =
   ## initialize the library to prepare for git operations;
-  ## returns true if libgit2 was initialized
-  when defined(gitShutsDown):
-    return initGit()
+  ## returns the number of outstanding initializations.
+  result = git_libgit2_init()
+  if result <= 0:
+    raise newException(OSError, "unable to init git")
   else:
-    block:
-      once:
-        return initGit()
-
-      result = true
-
-proc shutdown*(): bool =
-  ## shutdown the library, freeing any libgit2 data;
-  ## returns true if shutdown was successful
-  when defined(gitShutsDown):
-    result = git_libgit2_shutdown() >= 0
     when defined(debugGit):
-      debug "git shut"
-  else:
-    result = true
+      debug "git init"
+  # let it at least try to work if certs are not found
+  discard loadCerts()
+
+proc shutdown*(): int =
+  ## decrement the initialization counter.  when the counter is zero,
+  ## no outstanding resources are allocated by the underlying libgit2.
+  result = git_libgit2_shutdown()
+  when defined(debugGit):
+    debug "git shut"
 
 template withGit(body: untyped) =
   ## convenience to ensure git is initialized and shutdown
-  if not init():
-    raise newException(OSError, "unable to init git")
-  defer:
-    if not shutdown():
-      raise newException(OSError, "unable to shut git")
-  body
+  if init() > 0:
+    defer:
+      discard shutdown()
+    body
 
 template setResultAsError(result: typed; code: cint | GitResultCode) =
   ## given a git result code, assign it to the result to indicate error;
@@ -430,7 +409,6 @@ proc free*(gstrings: var GitStrArray) =
   template gstrs: git_strarray = cast[git_strarray](gstrings)
   if not gstrs.strings.isNil:
     git_strarray_dispose(addr gstrings)
-    assert gstrs.strings.isNil
 
 proc free*(gstrings: var GittyStrArray) =
   ## free a git_strarray allocated by nim
@@ -438,6 +416,7 @@ proc free*(gstrings: var GittyStrArray) =
   if not gstrs.strings.isNil:
     deallocCStringArray cast[cstringArray](gstrs.strings)
     gstrs.strings = nil
+    gstrs.count = 0
 
 iterator items(gstrings: GitStrArray | GittyStrArray): string =
   ## emit the members of a string array
@@ -1563,23 +1542,19 @@ iterator commitsForSpec*(repo: GitRepository;
       for rev in repo.revWalk(walker):
         # if there's an error, yield it
         if rev.isErr:
-          #yield ok[GitThing](rev.get)
-          yield Result[GitThing, GitResultCode].ok rev.get
+          yield err[GitThing](rev.error)
           break complete
         else:
-          let
-            matched = rev.get.commit.parentsMatch(options, ps)
+          let matched = rev.get.commit.parentsMatch(options, ps)
           if matched.isOk and matched.get:
             # all the parents matched, so yield this revision
-            #yield ok[GitThing](rev.get)
-            yield Result[GitThing, GitResultCode].ok rev.get
+            yield ok[GitThing](get rev)
           else:
             # we're not going to emit this revision, so free it
             free rev.get
             if matched.isErr:
               # the matching process produced an error
-              #yield err[GitThing](matched.error)
-              yield Result[GitThing, GitResultCode].err matched.error
+              yield err[GitThing](matched.error)
               break complete
 
 proc tagCreateLightweight*(repo: GitRepository; target: GitThing;
