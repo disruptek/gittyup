@@ -1,0 +1,192 @@
+nimTitle	gittyup	gittyup.html	module gittyup		0
+nim	GIT_DIFF_OPTIONS_VERSION	gittyup.html#GIT_DIFF_OPTIONS_VERSION	const GIT_DIFF_OPTIONS_VERSION		44
+nim	GIT_STATUS_OPTIONS_VERSION	gittyup.html#GIT_STATUS_OPTIONS_VERSION	const GIT_STATUS_OPTIONS_VERSION		45
+nim	GIT_CLONE_OPTIONS_VERSION	gittyup.html#GIT_CLONE_OPTIONS_VERSION	const GIT_CLONE_OPTIONS_VERSION		46
+nim	GIT_CHECKOUT_OPTIONS_VERSION	gittyup.html#GIT_CHECKOUT_OPTIONS_VERSION	const GIT_CHECKOUT_OPTIONS_VERSION		47
+nim	GIT_FETCH_OPTIONS_VERSION	gittyup.html#GIT_FETCH_OPTIONS_VERSION	const GIT_FETCH_OPTIONS_VERSION		48
+nim	GitTreeWalkCallback	gittyup.html#GitTreeWalkCallback	type GitTreeWalkCallback		67
+nim	GitObjectKind	gittyup.html#GitObjectKind	type GitObjectKind		70
+nim	GitThing	gittyup.html#GitThing	type GitThing		71
+nim	GitBuf	gittyup.html#GitBuf	type GitBuf		85
+nim	GitDiff	gittyup.html#GitDiff	type GitDiff		86
+nim	GitPathSpec	gittyup.html#GitPathSpec	type GitPathSpec		87
+nim	GitRevWalker	gittyup.html#GitRevWalker	type GitRevWalker		88
+nim	GitTreeEntry	gittyup.html#GitTreeEntry	type GitTreeEntry		89
+nim	GitTreeEntries	gittyup.html#GitTreeEntries	type GitTreeEntries		90
+nim	GitObject	gittyup.html#GitObject	type GitObject		91
+nim	GitOid	gittyup.html#GitOid	type GitOid		92
+nim	GitOids	gittyup.html#GitOids	type GitOids		93
+nim	GitRemote	gittyup.html#GitRemote	type GitRemote		94
+nim	GitReference	gittyup.html#GitReference	type GitReference		95
+nim	GitRepository	gittyup.html#GitRepository	type GitRepository		96
+nim	GitStrArray	gittyup.html#GitStrArray	type GitStrArray		97
+nim	GittyStrArray	gittyup.html#GittyStrArray	type GittyStrArray		98
+nim	GitTag	gittyup.html#GitTag	type GitTag		99
+nim	GitCommit	gittyup.html#GitCommit	type GitCommit		100
+nim	GitStatus	gittyup.html#GitStatus	type GitStatus		101
+nim	GitStatusList	gittyup.html#GitStatusList	type GitStatusList		102
+nim	GitTree	gittyup.html#GitTree	type GitTree		103
+nim	GitSignature	gittyup.html#GitSignature	type GitSignature		104
+nim	GitTagTable	gittyup.html#GitTagTable	type GitTagTable		105
+nim	GitResult	gittyup.html#GitResult	type GitResult		106
+nim	GitResultCode	gittyup.html#GitResultCode	type GitResultCode		108
+nim	GitRepoState	gittyup.html#GitRepoState	type GitRepoState		109
+nim	GitCheckoutNotify	gittyup.html#GitCheckoutNotify	type GitCheckoutNotify		110
+nim	GitTreeWalkMode	gittyup.html#GitTreeWalkMode	type GitTreeWalkMode		111
+nim	GitStatusShow	gittyup.html#GitStatusShow	type GitStatusShow		112
+nim	GitStatusFlag	gittyup.html#GitStatusFlag	type GitStatusFlag		113
+nim	GitCheckoutStrategy	gittyup.html#GitCheckoutStrategy	type GitCheckoutStrategy		114
+nim	GitErrorClass	gittyup.html#GitErrorClass	type GitErrorClass		115
+nim	GitStatusOption	gittyup.html#GitStatusOption	type GitStatusOption		116
+nim	GitBranchType	gittyup.html#GitBranchType	type GitBranchType		117
+nim	GitPathSpecFlag	gittyup.html#GitPathSpecFlag	type GitPathSpecFlag		118
+nim	hash	gittyup.html#hash,git_checkout_strategy_t	proc hash(gcs: GitCheckoutStrategy): Hash		140
+nim	dumpError	gittyup.html#dumpError,git_error_code	proc dumpError(code: GitResultCode): string		176
+nim	gitFail	gittyup.html#gitFail.t,git_error_code,untyped	template gitFail(code: GitResultCode; body: untyped)		189
+nim	gitFail	gittyup.html#gitFail.t,typed,git_error_code,untyped	template gitFail(allocd: typed; code: GitResultCode; body: untyped)		194
+nim	gitTrap	gittyup.html#gitTrap.t,git_error_code,untyped	template gitTrap(code: GitResultCode; body: untyped)		201
+nim	gitTrap	gittyup.html#gitTrap.t,typed,git_error_code,untyped	template gitTrap(allocd: typed; code: GitResultCode; body: untyped)		208
+nim	ok	gittyup.html#ok.t,Result[T,git_error_code],T	template ok[T](self: var Result[T, GitResultCode]; x: T): auto		217
+nim	err	gittyup.html#err.t,Result[T,git_error_code],git_error_code	template err[T](self: var Result[T, GitResultCode]; x: GitResultCode): auto		219
+nim	ok	gittyup.html#ok.t,T	template ok[T](x: T): auto		223
+nim	err	gittyup.html#err.t,git_error_code	template err[T](x: GitResultCode): auto		226
+nim	`:=`	gittyup.html#:=.t,,Result[T,git_error_code],untyped	template `:=`[T](v: untyped{nkIdent}; vv: Result[T, GitResultCode]; body: untyped): untyped		230
+nim	init	gittyup.html#init	proc init(): bool		289
+nim	shutdown	gittyup.html#shutdown	proc shutdown(): bool		301
+nim	free	gittyup.html#free,ptr.T	proc free[T: GitHeapGits](point: ptr T)		340
+nim	free	gittyup.html#free,ptr.T_2	proc free[T: NimHeapGits](point: ptr T)		388
+nim	free	gittyup.html#free,sinkGitThing	proc free(thing: sink GitThing)		400
+nim	free	gittyup.html#free,sinkGitTreeEntries	proc free(entries: sink GitTreeEntries)		415
+nim	free	gittyup.html#free,string	proc free(s: string)		420
+nim	free	gittyup.html#free,GitStrArray	proc free(gstrings: var GitStrArray)		428
+nim	free	gittyup.html#free,GittyStrArray	proc free(gstrings: var GittyStrArray)		435
+nim	toStrArray	gittyup.html#toStrArray,openArray[string]	proc toStrArray(values: openArray[string]): GittyStrArray		448
+nim	toStringSeq	gittyup.html#toStringSeq	proc toStringSeq(gstrings: GitStrArray | GittyStrArray): seq[string]		455
+nim	short	gittyup.html#short,GitOid,int	proc short(oid: GitOid; size: int): GitResult[string]		479
+nim	url	gittyup.html#url,GitRemote	proc url(remote: GitRemote): Uri		491
+nim	oid	gittyup.html#oid,GitTreeEntry	proc oid(entry: GitTreeEntry): GitOid		497
+nim	oid	gittyup.html#oid,GitReference	proc oid(got: GitReference): GitOid		503
+nim	oid	gittyup.html#oid,GitObject	proc oid(obj: GitObject): GitOid		509
+nim	oid	gittyup.html#oid,GitThing	proc oid(thing: GitThing): GitOid		515
+nim	oid	gittyup.html#oid,GitTag	proc oid(tag: GitTag): GitOid		522
+nim	name	gittyup.html#name,GitReference	proc name(got: GitReference): string		528
+nim	name	gittyup.html#name,GitTreeEntry	proc name(entry: GitTreeEntry): string		533
+nim	name	gittyup.html#name,GitRemote	proc name(remote: GitRemote): string		538
+nim	isTag	gittyup.html#isTag,GitReference	proc isTag(got: GitReference): bool		543
+nim	flags	gittyup.html#flags,GitStatus	proc flags(status: GitStatus): set[GitStatusFlag]		548
+nim	repositoryPath	gittyup.html#repositoryPath,GitRepository	proc repositoryPath(repo: GitRepository): string		555
+nim	`$`	gittyup.html#$,GitTagTable	proc `$`(tags: GitTagTable): string		559
+nim	`$`	gittyup.html#$,GitPathSpec	proc `$`(ps: GitPathSpec): string		563
+nim	`$`	gittyup.html#$,GitRevWalker	proc `$`(walker: GitRevWalker): string		567
+nim	`$`	gittyup.html#$,GitRemote	proc `$`(remote: GitRemote): string		571
+nim	`$`	gittyup.html#$,GitRepository	proc `$`(repo: GitRepository): string		575
+nim	`$`	gittyup.html#$,git_buf	proc `$`(buffer: git_buf): string		579
+nim	`$`	gittyup.html#$,ptr.git_buf	proc `$`(buffer: ptr git_buf): string		582
+nim	`$`	gittyup.html#$,ptr.git_annotated_commit	proc `$`(annotated: ptr git_annotated_commit): string		586
+nim	`$`	gittyup.html#$,GitOid	proc `$`(oid: GitOid): string		590
+nim	`$`	gittyup.html#$,GitTag	proc `$`(tag: GitTag): string		594
+nim	`$`	gittyup.html#$,GitReference	proc `$`(reference: GitReference): string		601
+nim	`$`	gittyup.html#$,GitTreeEntry	proc `$`(entry: GitTreeEntry): string		608
+nim	`$`	gittyup.html#$,GitObject	proc `$`(obj: GitObject): string		612
+nim	`$`	gittyup.html#$,GitCommit	proc `$`(commit: GitCommit): string		623
+nim	`$`	gittyup.html#$,GitThing	proc `$`(thing: GitThing): string		627
+nim	`$`	gittyup.html#$,GitStatus	proc `$`(status: GitStatus): string		632
+nim	copy	gittyup.html#copy,GitCommit	proc copy(commit: GitCommit): GitResult[GitCommit]		639
+nim	copy	gittyup.html#copy,GitThing	proc copy(thing: GitThing): GitResult[GitThing]		648
+nim	copy	gittyup.html#copy,GitOid	proc copy(oid: GitOid): GitResult[GitOid]		671
+nim	branchName	gittyup.html#branchName,GitReference	proc branchName(got: GitReference): string		679
+nim	isBranch	gittyup.html#isBranch,GitReference	proc isBranch(got: GitReference): bool		695
+nim	owner	gittyup.html#owner,GitThing	proc owner(thing: GitThing): GitRepository		701
+nim	owner	gittyup.html#owner,GitCommit	proc owner(commit: GitCommit): GitRepository		708
+nim	owner	gittyup.html#owner,GitReference	proc owner(reference: GitReference): GitRepository		714
+nim	message	gittyup.html#message,GitCommit	proc message(commit: GitCommit): string		724
+nim	message	gittyup.html#message,GitTag	proc message(tag: GitTag): string		730
+nim	message	gittyup.html#message,GitThing	proc message(thing: GitThing): string		736
+nim	summary	gittyup.html#summary,GitCommit	proc summary(commit: GitCommit): string		750
+nim	summary	gittyup.html#summary,GitThing	proc summary(thing: GitThing): string		756
+nim	free	gittyup.html#free,sinkGitTagTable	proc free(table: sink GitTagTable)		772
+nim	hash	gittyup.html#hash,GitOid	proc hash(oid: GitOid): Hash		804
+nim	hash	gittyup.html#hash,GitTag	proc hash(tag: GitTag): Hash		811
+nim	hash	gittyup.html#hash,GitThing	proc hash(thing: GitThing): Hash		818
+nim	commit	gittyup.html#commit,GitThing	proc commit(thing: GitThing): GitCommit		825
+nim	committer	gittyup.html#committer,GitThing	proc committer(thing: GitThing): GitSignature		831
+nim	author	gittyup.html#author,GitThing	proc author(thing: GitThing): GitSignature		837
+nim	clone	gittyup.html#clone,Uri,string,string	proc clone(uri: Uri; path: string; branch = ""): GitResult[GitRepository]		843
+nim	setHeadDetached	gittyup.html#setHeadDetached,GitRepository,GitOid	proc setHeadDetached(repo: GitRepository; oid: GitOid): GitResultCode		860
+nim	setHeadDetached	gittyup.html#setHeadDetached,GitRepository,string	proc setHeadDetached(repo: GitRepository; reference: string): GitResultCode		865
+nim	repositoryOpen	gittyup.html#repositoryOpen,string	proc repositoryOpen(path: string): GitResult[GitRepository]		877
+nim	openRepository	gittyup.html#openRepository,string	proc openRepository(path: string): GitResult[GitRepository]		885
+nim	fetchRemote	gittyup.html#fetchRemote,GitRepository,string,GittyStrArray	proc fetchRemote(repo: GitRepository; remoteName: string; refSpecs: GittyStrArray): GitResultCode		890
+nim	fetchRemote	gittyup.html#fetchRemote,GitRepository,string	proc fetchRemote(repo: GitRepository; remoteName: string): GitResultCode		904
+nim	repositoryHead	gittyup.html#repositoryHead,GitRepository	proc repositoryHead(repo: GitRepository): GitResult[GitReference]		910
+nim	headReference	gittyup.html#headReference,GitRepository	proc headReference(repo: GitRepository): GitResult[GitReference]		919
+nim	getRemoteNames	gittyup.html#getRemoteNames,GitRepository	proc getRemoteNames(repo: GitRepository): GitResult[seq[string]]		923
+nim	fetchRemotes	gittyup.html#fetchRemotes,GitRepository,seq[string]	proc fetchRemotes(repo: GitRepository; remoteNames: seq[string]): seq[GitResultCode]		934
+nim	remoteLookup	gittyup.html#remoteLookup,GitRepository,string	proc remoteLookup(repo: GitRepository; name: string): GitResult[GitRemote]		941
+nim	remoteRename	gittyup.html#remoteRename,GitRepository,string,string	proc remoteRename(repo: GitRepository; prior: string; next: string): GitResult[\n    seq[string]]		950
+nim	remoteDelete	gittyup.html#remoteDelete,GitRepository,string	proc remoteDelete(repo: GitRepository; name: string): GitResultCode		962
+nim	remoteCreate	gittyup.html#remoteCreate,GitRepository,string,Uri	proc remoteCreate(repo: GitRepository; name: string; url: Uri): GitResult[GitRemote]		967
+nim	`==`	gittyup.html#==,GitOid,GitOid	proc `==`(a, b: GitOid): bool		977
+nim	targetId	gittyup.html#targetId,GitThing	proc targetId(thing: GitThing): GitOid		989
+nim	target	gittyup.html#target,GitThing	proc target(thing: GitThing): GitResult[GitThing]		997
+nim	tagList	gittyup.html#tagList,GitRepository	proc tagList(repo: GitRepository): GitResult[seq[string]]		1008
+nim	lookupThing	gittyup.html#lookupThing,GitRepository,string	proc lookupThing(repo: GitRepository; name: string): GitResult[GitThing]		1019
+nim	newTagTable	gittyup.html#newTagTable,int	proc newTagTable(size = 32): GitTagTable		1027
+nim	tagTable	gittyup.html#tagTable,GitRepository	proc tagTable(repo: GitRepository): GitResult[GitTagTable]		1055
+nim	shortestTag	gittyup.html#shortestTag,GitTagTable,string	proc shortestTag(table: GitTagTable; oid: string): string		1086
+nim	getHeadOid	gittyup.html#getHeadOid,GitRepository	proc getHeadOid(repo: GitRepository): GitResult[GitOid]		1095
+nim	repositoryState	gittyup.html#repositoryState,GitRepository	proc repositoryState(repository: GitRepository): GitRepoState		1106
+nim	status	gittyup.html#status.i,GitRepository,git_status_show_t	iterator status(repository: GitRepository; show: GitStatusShow;\n       flags = defaultStatusFlags): GitResult[GitStatus]		1111
+nim	checkoutTree	gittyup.html#checkoutTree,GitRepository,GitThing,seq[string]	proc checkoutTree(repo: GitRepository; thing: GitThing; paths: seq[string] = @[];\n             strategy = defaultCheckoutStrategy): GitResultCode		1152
+nim	checkoutTree	gittyup.html#checkoutTree,GitRepository,string,seq[string]	proc checkoutTree(repo: GitRepository; reference: string; paths: seq[string] = @[];\n             strategy = defaultCheckoutStrategy): GitResultCode		1207
+nim	checkoutHead	gittyup.html#checkoutHead,GitRepository	proc checkoutHead(repo: GitRepository; strategy = defaultCheckoutStrategy): GitResultCode		1219
+nim	setHead	gittyup.html#setHead,GitRepository,string	proc setHead(repo: GitRepository; short: string): GitResultCode		1237
+nim	referenceDWIM	gittyup.html#referenceDWIM,GitRepository,string	proc referenceDWIM(repo: GitRepository; short: string): GitResult[GitReference]		1242
+nim	lookupTreeThing	gittyup.html#lookupTreeThing,GitRepository,string	proc lookupTreeThing(repo: GitRepository; path = "HEAD"): GitResult[GitThing]		1252
+nim	treeEntryByPath	gittyup.html#treeEntryByPath,GitThing,string	proc treeEntryByPath(thing: GitThing; path: string): GitResult[GitTreeEntry]		1256
+nim	treeEntryToThing	gittyup.html#treeEntryToThing,GitRepository,GitTreeEntry	proc treeEntryToThing(repo: GitRepository; entry: GitTreeEntry): GitResult[GitThing]		1275
+nim	treeWalk	gittyup.html#treeWalk,GitTree,git_treewalk_mode,git_treewalk_cb,pointer	proc treeWalk(tree: GitTree; mode: git_treewalk_mode; callback: git_treewalk_cb;\n         payload: pointer): git_error_code		1285
+nim	treeWalk	gittyup.html#treeWalk,GitTree,git_treewalk_mode	proc treeWalk(tree: GitTree; mode: git_treewalk_mode): GitResult[GitTreeEntries]		1291
+nim	treeWalk	gittyup.html#treeWalk,GitThing	proc treeWalk(tree: GitThing; mode = GIT_TREEWALK_PRE): GitResult[GitTreeEntries]		1310
+nim	newRevWalk	gittyup.html#newRevWalk,GitRepository	proc newRevWalk(repo: GitRepository): GitResult[GitRevWalker]		1315
+nim	next	gittyup.html#next,GitRevWalker	proc next(walker: GitRevWalker): GitResult[GitOid]		1324
+nim	push	gittyup.html#push,GitRevWalker,GitOid	proc push(walker: GitRevWalker; oid: GitOid): GitResultCode		1337
+nim	lookupCommit	gittyup.html#lookupCommit,GitRepository,GitOid	proc lookupCommit(repo: GitRepository; oid: GitOid): GitResult[GitThing]		1346
+nim	revWalk	gittyup.html#revWalk.i,GitRepository,GitRevWalker	iterator revWalk(repo: GitRepository; walker: GitRevWalker): GitResult[GitThing]		1355
+nim	newPathSpec	gittyup.html#newPathSpec,openArray[string]	proc newPathSpec(spec: openArray[string]): GitResult[GitPathSpec]		1397
+nim	commitsForSpec	gittyup.html#commitsForSpec.i,GitRepository,openArray[string]	iterator commitsForSpec(repo: GitRepository; spec: openArray[string]): GitResult[GitThing]		1521
+nim	tagCreateLightweight	gittyup.html#tagCreateLightweight,GitRepository,GitThing,string	proc tagCreateLightweight(repo: GitRepository; target: GitThing; name: string;\n                     force = false): GitResult[GitOid]		1585
+nim	tagCreateLightweight	gittyup.html#tagCreateLightweight,GitThing,string	proc tagCreateLightweight(target: GitThing; name: string; force = false): GitResult[\n    GitOid]		1604
+nim	branchUpstream	gittyup.html#branchUpstream,GitReference	proc branchUpstream(branch: GitReference): GitResult[GitReference]		1609
+nim	setBranchUpstream	gittyup.html#setBranchUpstream,GitReference,string	proc setBranchUpstream(branch: GitReference; name: string): GitResultCode		1618
+nim	branchRemoteName	gittyup.html#branchRemoteName,GitRepository,string	proc branchRemoteName(repo: GitRepository; branch: string): GitResult[string]		1624
+nim	branches	gittyup.html#branches.i,GitRepository	iterator branches(repo: GitRepository; flags = {GIT_BRANCH_LOCAL, GIT_BRANCH_REMOTE}): GitResult[\n    GitReference]		1639
+nim	hasThing	gittyup.html#hasThing,GitTagTable,GitThing	proc hasThing(tags: GitTagTable; thing: GitThing): bool		1707
+nim	newSignature	gittyup.html#newSignature,string,string,Time	proc newSignature(name, email: string; time: Time): GitResult[GitSignature]		1714
+nim	defaultSignature	gittyup.html#defaultSignature,GitRepository	proc defaultSignature(repo: GitRepository): GitResult[GitSignature]		1725
+nim	defaultSignature	gittyup.html#defaultSignature,GitRepository,Time	proc defaultSignature(repo: GitRepository; time: Time): GitResult[GitSignature]		1734
+nim	tagCreate	gittyup.html#tagCreate,GitRepository,GitThing,string,GitSignature,string	proc tagCreate(repo: GitRepository; target: GitThing; name: string;\n          tagger: GitSignature; message = ""; force = false): GitResult[GitOid]		1746
+nim	tagCreate	gittyup.html#tagCreate,GitRepository,GitThing,string,string	proc tagCreate(repo: GitRepository; target: GitThing; name: string; message = "";\n          force = false): GitResult[GitOid]		1768
+nim	tagCreate	gittyup.html#tagCreate,GitThing,string,string	proc tagCreate(target: GitThing; name: string; message = ""; force = false): GitResult[\n    GitOid]		1780
+nim	tagDelete	gittyup.html#tagDelete,GitRepository,string	proc tagDelete(repo: GitRepository; name: string): GitResultCode		1792
+nim	repositoryDiscover	gittyup.html#repositoryDiscover,string,seq[string]	proc repositoryDiscover(path: string; ceilings: seq[string] = @[]; xfs = true): GitResult[\n    string]		1798
+nimgrp	$	gittyup.html#$-procs-all	proc		559
+nimgrp	defaultsignature	gittyup.html#defaultSignature-procs-all	proc		1725
+nimgrp	treewalk	gittyup.html#treeWalk-procs-all	proc		1285
+nimgrp	tagcreate	gittyup.html#tagCreate-procs-all	proc		1746
+nimgrp	setheaddetached	gittyup.html#setHeadDetached-procs-all	proc		860
+nimgrp	fetchremote	gittyup.html#fetchRemote-procs-all	proc		890
+nimgrp	message	gittyup.html#message-procs-all	proc		724
+nimgrp	tagcreatelightweight	gittyup.html#tagCreateLightweight-procs-all	proc		1585
+nimgrp	summary	gittyup.html#summary-procs-all	proc		750
+nimgrp	checkouttree	gittyup.html#checkoutTree-procs-all	proc		1152
+nimgrp	owner	gittyup.html#owner-procs-all	proc		701
+nimgrp	free	gittyup.html#free-procs-all	proc		340
+nimgrp	name	gittyup.html#name-procs-all	proc		528
+nimgrp	oid	gittyup.html#oid-procs-all	proc		497
+nimgrp	copy	gittyup.html#copy-procs-all	proc		639
+nimgrp	hash	gittyup.html#hash-procs-all	proc		140
+nimgrp	err	gittyup.html#err-templates-all	template		219
+nimgrp	gittrap	gittyup.html#gitTrap-templates-all	template		201
+nimgrp	ok	gittyup.html#ok-templates-all	template		217
+nimgrp	gitfail	gittyup.html#gitFail-templates-all	template		189
