@@ -50,7 +50,7 @@ template gitTrap*(code: GitResultCode) =
   if code != GIT_OK:
     fail dumpError(code)
 
-when false:
+suite "giddy up, pardner":
   ## open the local repo
   test:
     if fileExists(getEnv"HOME" / ".gitconfig"):
@@ -138,7 +138,6 @@ when false:
       check rev.isOk
       free rev.get
 
-suite "giddy up, pardner":
   ## commits for spec
   test:
     cloned := cloneme.clone(tmpdir):
@@ -169,7 +168,6 @@ suite "giddy up, pardner":
           break found
       fail "unable to find v102"
 
-when false:
   ## fetchRemote
   test:
     cloned := cloneme.clone(tmpdir):
