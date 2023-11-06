@@ -222,7 +222,7 @@ template err*[T](self: var Result[T, GitResultCode]; x: GitResultCode): auto =
 # create a new result (eg. for an iterator)
 template ok*[T](x: T): auto =
   #results.ok(Result[T, GitResultCode], x)
-  results.ok(GitResult[T], x)
+  badresults.ok(GitResult[T], x)
 template err*[T](x: GitResultCode): auto =
   #results.err(Result[T, GitResultCode], x)
   badresults.err(Result[T, GitResultCode], x)
@@ -436,7 +436,7 @@ proc free*(gstrings: var GittyStrArray) =
   ## free a git_strarray allocated by nim
   template gstrs: git_strarray = gstrings.git_strarray
   if not gstrs.strings.isNil:
-    dealloc gstrs.strings
+    deallocCStringArray cast[cstringArray](gstrs.strings)
     gstrs.strings = nil
 
 iterator items(gstrings: GitStrArray | GittyStrArray): string =
