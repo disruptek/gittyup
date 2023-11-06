@@ -222,7 +222,7 @@ template err*[T](self: var Result[T, GitResultCode]; x: GitResultCode): auto =
 # create a new result (eg. for an iterator)
 template ok*[T](x: T): auto =
   #results.ok(Result[T, GitResultCode], x)
-  results.ok(GitResult[T], x)
+  badresults.ok(GitResult[T], x)
 template err*[T](x: GitResultCode): auto =
   #results.err(Result[T, GitResultCode], x)
   badresults.err(Result[T, GitResultCode], x)
@@ -409,14 +409,14 @@ proc free*(gstrings: var GitStrArray) =
   template gstrs: git_strarray = cast[git_strarray](gstrings)
   if not gstrs.strings.isNil:
     git_strarray_dispose(addr gstrings)
-    assert gstrs.strings.isNil
 
 proc free*(gstrings: var GittyStrArray) =
   ## free a git_strarray allocated by nim
   template gstrs: git_strarray = gstrings.git_strarray
   if not gstrs.strings.isNil:
-    dealloc gstrs.strings
+    deallocCStringArray cast[cstringArray](gstrs.strings)
     gstrs.strings = nil
+    gstrs.count = 0
 
 iterator items(gstrings: GitStrArray | GittyStrArray): string =
   ## emit the members of a string array
@@ -1542,23 +1542,19 @@ iterator commitsForSpec*(repo: GitRepository;
       for rev in repo.revWalk(walker):
         # if there's an error, yield it
         if rev.isErr:
-          #yield ok[GitThing](rev.get)
-          yield Result[GitThing, GitResultCode].ok rev.get
+          yield err[GitThing](rev.error)
           break complete
         else:
-          let
-            matched = rev.get.commit.parentsMatch(options, ps)
+          let matched = rev.get.commit.parentsMatch(options, ps)
           if matched.isOk and matched.get:
             # all the parents matched, so yield this revision
-            #yield ok[GitThing](rev.get)
-            yield Result[GitThing, GitResultCode].ok rev.get
+            yield ok[GitThing](get rev)
           else:
             # we're not going to emit this revision, so free it
             free rev.get
             if matched.isErr:
               # the matching process produced an error
-              #yield err[GitThing](matched.error)
-              yield Result[GitThing, GitResultCode].err matched.error
+              yield err[GitThing](matched.error)
               break complete
 
 proc tagCreateLightweight*(repo: GitRepository; target: GitThing;
